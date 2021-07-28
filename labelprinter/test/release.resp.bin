@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<status>
+<op>cancel</op>
+<job_token>L1807901834</job_token>
+<page_count>-1</page_count>
+<job_timeout>99</job_timeout>
+<code>0</code>
+<comment>lock cancel successful</comment>
+</status>
