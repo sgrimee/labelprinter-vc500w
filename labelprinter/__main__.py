@@ -18,6 +18,7 @@
 
 import argparse, json
 
+import mimetypes 
 from labelprinter.connection import Connection
 from labelprinter.printer import LabelPrinter
 
@@ -110,12 +111,16 @@ def print_jpeg(printer, use_lock, mode, cut, jpeg_file, wait_after_print):
         if use_lock:
             job_status = printer.get_job_status();
             print('Job status: %s, %s, %s. Sending the print command...' %(job_status.print_state, job_status.print_job_stage, job_status.print_job_error));
-
-        print_answer = printer.print_jpeg(jpeg_file, mode, cut);
-        print("PRINT OK");
-
-        if wait_after_print:
-            printer.wait_to_turn_idle();
+        file_type = mimetypes.guess_type(jpeg_file.name)[0];
+        print('Input file type is %s' % (file_type));
+        if file_type == 'image/jpeg':
+            print_answer = printer.print_jpeg(jpeg_file, mode, cut);
+            if wait_after_print:
+                printer.wait_to_turn_idle();
+            print("PRINT OK");
+        else:
+            print('not a JPEG file');
+            print('PRINT FAILED');
     finally:
         if use_lock:
             print('Releasing lock for job %s...' % lock.job_number);
