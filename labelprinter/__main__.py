@@ -17,6 +17,10 @@
 
 
 import argparse, json
+                                      
+from PIL import Image
+import tempfile
+
 
 import mimetypes 
 from labelprinter.connection import Connection
