@@ -113,6 +113,15 @@ def print_jpeg(printer, use_lock, mode, cut, jpeg_file, wait_after_print):
             print('Job status: %s, %s, %s. Sending the print command...' %(job_status.print_state, job_status.print_job_stage, job_status.print_job_error));
         file_type = mimetypes.guess_type(jpeg_file.name)[0];
         print('Input file type is %s' % (file_type));
+        if file_type.startswith('image/'):
+            with tempfile.NamedTemporaryFile() as tmp:
+                im1 = Image.open(r'/home/len/A47B9C575CC9ABD2A884DBD85D2414B0BB96.png')
+                imX = im1.convert('RGB')
+                pathName = tmp.name + '.jpg'
+                imX.save(pathName)
+                print(pathName)
+                jpeg_file = pathName
+
         if file_type == 'image/jpeg':
             print_answer = printer.print_jpeg(jpeg_file, mode, cut);
             if wait_after_print:
