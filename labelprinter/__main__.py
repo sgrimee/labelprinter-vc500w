@@ -17,10 +17,11 @@
 
 
 import argparse, json
+import gzip
                                       
 from PIL import Image
 import tempfile
-
+import io
 
 import mimetypes 
 from labelprinter.connection import Connection
@@ -42,7 +43,7 @@ def main():
     print_group = parser.add_argument_group('print options')
 
     print_group.add_argument('--print-lock', action='store_true', help='use the lock/release mechanism for printing (error prone, do not use unless strictly required)');
-    print_group.add_argument('--print-mode', choices=['vivid', 'normal'], default='normal', help='sets the print mode for a vivid or normal printing, defaults to %(default)s');
+    print_group.add_argument('--print-mode', choices=['vivid', 'normal'], default='vivid', help='sets the print mode for a vivid or normal printing, defaults to %(default)s');
     print_group.add_argument('--print-cut', choices=['none', 'half', 'full'], default='full', help='sets the cut mode after printing, either not cutting (none), allowing the user to slide to cut (half) up to a complete cut of the label (full), defaults to %(default)s');
     print_group.add_argument('--wait-after-print', action='store_true', help='wait for the printer to turn idle after printing before returning');
 
@@ -117,14 +118,22 @@ def print_jpeg(printer, use_lock, mode, cut, jpeg_file, wait_after_print):
             print('Job status: %s, %s, %s. Sending the print command...' %(job_status.print_state, job_status.print_job_stage, job_status.print_job_error));
         file_type = mimetypes.guess_type(jpeg_file.name)[0];
         print('Input file type is %s' % (file_type));
-        if file_type.startswith('image/'):
-            with tempfile.NamedTemporaryFile() as tmp:
-                im1 = Image.open(r'/home/len/A47B9C575CC9ABD2A884DBD85D2414B0BB96.png')
-                imX = im1.convert('RGB')
-                pathName = tmp.name + '.jpg'
-                imX.save(pathName)
-                print(pathName)
-                jpeg_file = pathName
+        if file_type.startswith('image/') and not file_type == 'image/jpeg':
+            print('Is %s but not jpeg, try convert' % file_type)
+            try:
+                with tempfile.NamedTemporaryFile() as tmp:
+                    im1 = Image.open(jpeg_file.name)
+                    imX = im1.convert('RGB')
+                    pathName = tmp.name + '.jpg'
+                    imX.save(pathName)
+                    
+                    jpeg_file = open(pathName, 'rb') 
+                    old_file_type = file_type
+                    file_type = mimetypes.guess_type(jpeg_file.name)[0];
+                    print('%s convert to %s' % ( old_file_type, file_type))
+            except:
+                print('fail for convert to jpg, ')
+       
 
         if file_type == 'image/jpeg':
             print_answer = printer.print_jpeg(jpeg_file, mode, cut);
