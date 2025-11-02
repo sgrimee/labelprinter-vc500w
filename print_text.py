@@ -107,9 +107,9 @@ def calculate_minimal_image_dimensions(text, config):
         width = padded_height  # Text height becomes image width after rotation
         height = tape_width_pixels  # Full tape width becomes image height
     else:
-        # Horizontal text: minimal width (text only), full height for vertical centering
-        width = padded_width  # Just text width
-        height = tape_width_pixels  # Full tape height for vertical centering
+        # Horizontal text: full tape width, reasonable height for text
+        width = tape_width_pixels  # Full tape width
+        height = padded_height  # Just text height
 
     return width, height, text_width, text_height, bbox
 
