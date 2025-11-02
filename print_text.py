@@ -149,7 +149,113 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
     """Try to create image using PIL/Pillow"""
     try:
         from PIL import Image, ImageDraw, ImageFont
-    except ImportError:
+    except ImportError as e:
+        if debug:
+            print(f"   PIL import failed: {e}")
+        return False
+
+    try:
+        width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
+        font_size = get_adjusted_font_size(config)
+
+        if debug:
+            print(f"   PIL: Image size {width}x{height}, text size {text_width}x{text_height}")
+
+        # Load font
+        font = load_font(config.get("font"), font_size)
+        if debug:
+            print(f"   PIL: Font loaded successfully")
+
+        # Create image with minimal dimensions
+        img = Image.new('RGB', (width, height), color='white')
+        draw = ImageDraw.Draw(img)
+
+        # Position text with minimal padding
+        padding = config.get("text_padding_pixels", 2)
+        if config["rotate"] == 90:
+            # Vertical text: center horizontally, minimal top margin
+            x = (width - text_height) // 2  # text_height becomes width after rotation
+            y = padding  # Minimal top margin
+        else:
+            # Horizontal text: center horizontally, minimal top margin
+            x = (width - text_width) // 2
+            y = padding  # Minimal top margin
+
+        if debug:
+            print(f"   PIL: Drawing text at ({x}, {y})")
+
+        draw.text((x, y), text, fill='black', font=font)
+
+        # Apply rotation
+        if config["rotate"] != 0:
+            if debug:
+                print(f"   PIL: Applying {config['rotate']}° rotation")
+            img = img.rotate(-config["rotate"], expand=True)
+
+        # Save as JPEG with high quality
+        if debug:
+            print(f"   PIL: Saving to {tmp_path}")
+        img.save(tmp_path, 'JPEG', quality=95, optimize=True)
+
+        return True
+
+    except Exception as e:
+        if debug:
+            print(f"   PIL failed: {e}")
+            import traceback
+            traceback.print_exc()
+        return False
+
+    try:
+        width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
+        font_size = get_adjusted_font_size(config)
+
+        if debug:
+            print(f"   PIL: Image size {width}x{height}, text size {text_width}x{text_height}")
+
+        # Load font
+        font = load_font(config.get("font"), font_size)
+        if debug:
+            print(f"   PIL: Font loaded successfully")
+
+        # Create image with minimal dimensions
+        img = Image.new('RGB', (width, height), color='white')
+        draw = ImageDraw.Draw(img)
+
+        # Position text with minimal padding
+        padding = config.get("text_padding_pixels", 2)
+        if config["rotate"] == 90:
+            # Vertical text: center horizontally, minimal top margin
+            x = (width - text_height) // 2  # text_height becomes width after rotation
+            y = padding  # Minimal top margin
+        else:
+            # Horizontal text: center horizontally, minimal top margin
+            x = (width - text_width) // 2
+            y = padding  # Minimal top margin
+
+        if debug:
+            print(f"   PIL: Drawing text at ({x}, {y})")
+
+        draw.text((x, y), text, fill='black', font=font)
+
+        # Apply rotation
+        if config["rotate"] != 0:
+            if debug:
+                print(f"   PIL: Applying {config['rotate']}° rotation")
+            img = img.rotate(-config["rotate"], expand=True)
+
+        # Save as JPEG with high quality
+        if debug:
+            print(f"   PIL: Saving to {tmp_path}")
+        img.save(tmp_path, 'JPEG', quality=95, optimize=True)
+
+        return True
+
+    except Exception as e:
+        if debug:
+            print(f"   PIL failed: {e}")
+            import traceback
+            traceback.print_exc()
         return False
 
     try:
