@@ -421,6 +421,16 @@ def print_label(image_path, config, debug=False):
     except subprocess.CalledProcessError as e:
         stderr_msg = e.stderr.decode() if e.stderr else "No stderr output"
         stdout_msg = e.stdout.decode() if e.stdout else "No stdout output"
+        
+        # Extract the actual error message if it's a ValueError from connection.py
+        if "ValueError:" in stderr_msg:
+            # Find the ValueError message and extract it
+            import re
+            error_match = re.search(r'ValueError: (.+?)(?:\n\n|\Z)', stderr_msg, re.DOTALL)
+            if error_match:
+                # Show just the ValueError message which already has helpful solutions
+                raise RuntimeError(f"Connection failed:\n{error_match.group(1).strip()}")
+        
         raise RuntimeError(
             f"Print failed:\n"
             f"  Exit code: {e.returncode}\n"
