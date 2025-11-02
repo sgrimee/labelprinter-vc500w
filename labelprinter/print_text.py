@@ -423,10 +423,11 @@ def print_label(image_path, config, debug=False):
         stderr_msg = e.stderr.decode() if e.stderr else "No stderr output"
         stdout_msg = e.stdout.decode() if e.stdout else "No stdout output"
         
+        import re
+        
         # Extract the actual error message if it's a ValueError from connection.py
         if "ValueError:" in stderr_msg:
             # Find the ValueError message and extract it
-            import re
             # Look for ValueError: followed by the message until double newline or end
             error_match = re.search(r'ValueError: (.+?)(?:\n\n|\Z)', stderr_msg, re.DOTALL)
             if error_match:
@@ -437,6 +438,18 @@ def print_label(image_path, config, debug=False):
                 print(f"\n❌ Connection Error:")
                 print(error_text)
                 return 1  # Return error code instead of raising
+        
+        # Extract TimeoutError for printer state timeout
+        if "TimeoutError:" in stderr_msg:
+            error_match = re.search(r'TimeoutError: (.+?)(?:\n\n|\Z)', stderr_msg, re.DOTALL)
+            if error_match:
+                error_text = error_match.group(1).strip()
+                print(f"\n❌ Printer Timeout:")
+                print(error_text)
+                if "did not become idle" in error_text:
+                    print("\nThe printer is busy with another job or needs attention.")
+                    print("Please wait for the current job to finish and try again.")
+                return 1
         
         # For other errors, show full details
         print(f"\n❌ Print failed with exit code {e.returncode}")
