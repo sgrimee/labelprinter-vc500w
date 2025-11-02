@@ -62,13 +62,31 @@ class LabelPrinter:
 
         return PrintAnswer(self._connection.get_message(), self._connection.get_message);
 
-    def wait_to_turn_idle(self):
+    def wait_to_turn_idle(self, timeout=30):
         job_status = None;
+        start_time = time.time();
+        max_attempts = int(timeout / 2.5);  # Each iteration waits 2.5 seconds
+        attempts = 0;
 
         while job_status == None or job_status.print_state != "IDLE":
+            if attempts >= max_attempts:
+                elapsed = time.time() - start_time;
+                state = job_status.print_state if job_status else "UNKNOWN";
+                raise TimeoutError(
+                    f"Printer did not become idle after {elapsed:.1f} seconds (state: {state}). "
+                    f"Please check if the printer is powered on and ready."
+                );
+            
             time.sleep(2.5);
-
-            job_status = self.get_job_status();
+            attempts += 1;
+            
+            try:
+                job_status = self.get_job_status();
+            except Exception as e:
+                # If we can't get status, the connection may be dead
+                raise ValueError(
+                    f"Lost connection to printer while waiting for idle state: {e}"
+                ) from e;
 
 class Question:
     def __init__(self, data):

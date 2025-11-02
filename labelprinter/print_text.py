@@ -395,7 +395,8 @@ def print_label(image_path, config, debug=False):
         result = subprocess.run(
             cmd,
             check=True,
-            capture_output=not debug,
+            capture_output=True,  # Always capture for error handling
+            text=False,  # Get bytes so we can decode properly
             timeout=PRINT_TIMEOUT
         )
         end_time = time.time()
@@ -407,7 +408,7 @@ def print_label(image_path, config, debug=False):
                 print(f"   Print stderr: {result.stderr.decode()}")
 
         duration = end_time - start_time
-        print(".1f")
+        print(f"✅ Print completed in {duration:.1f} seconds")
         return result
 
     except subprocess.TimeoutExpired:
@@ -426,17 +427,25 @@ def print_label(image_path, config, debug=False):
         if "ValueError:" in stderr_msg:
             # Find the ValueError message and extract it
             import re
+            # Look for ValueError: followed by the message until double newline or end
             error_match = re.search(r'ValueError: (.+?)(?:\n\n|\Z)', stderr_msg, re.DOTALL)
             if error_match:
+                error_text = error_match.group(1).strip()
+                # Remove the "The above exception..." if present
+                error_text = re.sub(r'\n*The above exception.*$', '', error_text, flags=re.DOTALL)
                 # Show just the ValueError message which already has helpful solutions
-                raise RuntimeError(f"Connection failed:\n{error_match.group(1).strip()}")
+                print(f"\n❌ Connection Error:")
+                print(error_text)
+                return 1  # Return error code instead of raising
         
-        raise RuntimeError(
-            f"Print failed:\n"
-            f"  Exit code: {e.returncode}\n"
-            f"  Stdout: {stdout_msg}\n"
-            f"  Stderr: {stderr_msg}"
-        )
+        # For other errors, show full details
+        print(f"\n❌ Print failed with exit code {e.returncode}")
+        if "SyntaxWarning" not in stderr_msg:  # Don't show syntax warnings
+            if stdout_msg and stdout_msg != "No stdout output":
+                print(f"\nOutput:\n{stdout_msg}")
+            if stderr_msg and stderr_msg != "No stderr output":
+                print(f"\nError details:\n{stderr_msg}")
+        return 1  # Return error code instead of raising
 
 def setup_argument_parser():
     """Create and configure the argument parser"""
@@ -521,9 +530,13 @@ def preview_image(image_path):
 def handle_printing(image_path, config, args):
     """Handle the printing phase"""
     print("\n🖨️  Phase 2: Printing label...")
-    print_label(image_path, config, debug=args.debug)
+    result = print_label(image_path, config, debug=args.debug)
+    if result == 1:
+        # Error already printed by print_label
+        return 1
     print("\n✅ Print complete!")
     print(f"   Image saved: {image_path}")
+    return 0
 
 def main():
     parser = setup_argument_parser()
@@ -551,12 +564,14 @@ def main():
 
         if args.dry_run:
             handle_dry_run(image_path, config, args)
+            print("\n🎉 Success! Label processing complete.")
+            return 0
         else:
-            handle_printing(image_path, config, args)
+            result = handle_printing(image_path, config, args)
             # Don't delete the image file when printing - keep it for reference
-
-        print("\n🎉 Success! Label processing complete.")
-        return 0
+            if result == 0:
+                print("\n🎉 Success! Label processing complete.")
+            return result
 
     except Exception as e:
         print(f"\n❌ Error: {e}")
