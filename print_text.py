@@ -139,11 +139,16 @@ def get_adjusted_font_size(config):
     """Get font size from config (no minimum constraint)"""
     return config["font_size"]
 
-def create_temp_image_file():
-    """Create a temporary JPEG file"""
-    tmp = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
-    tmp.close()
-    return tmp.name
+def create_image_file(text):
+    """Create a JPEG file in the images folder"""
+    import os
+    os.makedirs('images', exist_ok=True)
+    # Sanitize text for filename
+    safe_text = "".join(c for c in text if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    if not safe_text:
+        safe_text = "text"
+    filename = f"images/{safe_text}.jpg"
+    return filename
 
 def try_pil_image_creation(text, config, tmp_path, debug=False):
     """Try to create image using PIL/Pillow"""
@@ -323,7 +328,7 @@ def create_text_image(text, config, debug=False):
     print(f"   Image size: {width}x{height} pixels ({text_width}x{text_height} text) for {config['label_width_mm']}mm tape")
     print(f"   Using font size: {font_size} (thermal optimized)")
 
-    tmp_path = create_temp_image_file()
+    tmp_path = create_image_file(text)
 
     # Create image with PIL
     print("🎨 Creating image with PIL...")
@@ -488,9 +493,7 @@ def handle_printing(image_path, config, args):
     print("\n🖨️  Phase 2: Printing label...")
     print_label(image_path, config, debug=args.debug)
     print("\n✅ Print complete!")
-    # Clean up temporary file
-    os.unlink(image_path)
-    print(f"   Temporary image cleaned up: {image_path}")
+    print(f"   Image saved: {image_path}")
 
 def main():
     parser = setup_argument_parser()
@@ -520,6 +523,7 @@ def main():
             handle_dry_run(image_path, config, args)
         else:
             handle_printing(image_path, config, args)
+            # Don't delete the image file when printing - keep it for reference
 
         print("\n🎉 Success! Label processing complete.")
         return 0
