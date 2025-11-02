@@ -93,13 +93,13 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEquals(Config, type(result));
-        self.assertEquals("Wedge", result.model);
-        self.assertEquals("XXXXXXXXXXXXXXX", result.serial);
-        self.assertEquals("00:00:00:00:00:00", result.wlan_mac);
-        self.assertEquals(tape_type, result.tape_type);
-        self.assertEquals(tape_length_initial, result.tape_length_initial);
-        self.assertEquals(tape_width, result.tape_width);
+        self.assertEqual(Config, type(result));
+        self.assertEqual("Wedge", result.model);
+        self.assertEqual("XXXXXXXXXXXXXXX", result.serial);
+        self.assertEqual("00:00:00:00:00:00", result.wlan_mac);
+        self.assertEqual(tape_type, result.tape_type);
+        self.assertEqual(tape_length_initial, result.tape_length_initial);
+        self.assertEqual(tape_width, result.tape_width);
 
         return result
 
@@ -120,11 +120,11 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEquals(Status, type(result));
-        self.assertEquals(print_state, result.print_state)
-        self.assertEquals(print_job_stage, result.print_job_stage)
-        self.assertEquals(print_job_error, result.print_job_error)
-        self.assertEquals(tape_length_remaining, result.tape_length_remaining)
+        self.assertEqual(Status, type(result));
+        self.assertEqual(print_state, result.print_state)
+        self.assertEqual(print_job_stage, result.print_job_stage)
+        self.assertEqual(print_job_error, result.print_job_error)
+        self.assertEqual(tape_length_remaining, result.tape_length_remaining)
 
     def test_get_status_idle_after_boot(self):
         """Tests getting the status off an idle printer (after boot)"""
@@ -148,9 +148,9 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEquals(LockAnswer, type(result));
-        self.assertEquals(job_number, result.job_number)
-        self.assertEquals(code, result.code)
+        self.assertEqual(LockAnswer, type(result));
+        self.assertEqual(job_number, result.job_number)
+        self.assertEqual(code, result.code)
 
     def test_lock(self):
         """Tests locking the printer before printing"""
@@ -164,7 +164,7 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEquals(ReleaseAnswer, type(result));
+        self.assertEqual(ReleaseAnswer, type(result));
 
     def test_lock_release(self):
         """Tests releasing the printer lock after printing"""
@@ -180,7 +180,7 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEquals(PrintAnswer, type(result));
+        self.assertEqual(PrintAnswer, type(result));
 
     def test_print_image(self):
         """Tests printing a test image"""
