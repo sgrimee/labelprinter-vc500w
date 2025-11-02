@@ -32,7 +32,6 @@ def get_default_config():
         "text_padding_pixels": 2,  # Minimal padding around text for readability
 
         # Timeout settings
-        "imagemagick_timeout": 120,  # 2 minutes
         "print_timeout": 120,  # 2 minutes
         "avahi_timeout": 10,  # 10 seconds
     }
@@ -205,100 +204,10 @@ def load_font(font_path, font_size):
     except ImportError:
         raise RuntimeError("PIL/Pillow not available for font loading")
 
-def get_imagemagick_commands(text, config, tmp_path):
-    """Get ImageMagick command options to try"""
-    width, height, _, _ = calculate_minimal_image_dimensions(text, config)
-    font_size = get_adjusted_font_size(config)
 
-    base_args = [
-        "-size", f"{width}x{height}",
-        "xc:white",
-        "-colorspace", "RGB",
-        "-font", config["font"],
-        "-pointsize", str(font_size),
-        "-fill", "black",
-        "-gravity", "center",
-        "-annotate", "+0+0", config.get("text", ""),
-        "-quality", "90",
-        "-interlace", "none",
-        "-colorspace", "RGB"
-    ]
-
-    if config["rotate"] != 0:
-        base_args.extend(["-rotate", str(config["rotate"])])
-
-    base_args.append(tmp_path)
-
-    return [
-        {
-            "cmd": ["magick"],
-            "args": base_args,
-            "desc": "magick command"
-        },
-        {
-            "cmd": ["convert"],
-            "args": base_args,
-            "desc": "convert command"
-        },
-        {
-            "cmd": ["convert"],
-            "args": [
-                "-size", f"{width}x{height}",
-                "xc:white",
-                "-fill", "black",
-                "-gravity", "center",
-                "-pointsize", str(font_size),
-                "-annotate", "+0+0", config.get("text", ""),
-                "-quality", "90",
-                "-colorspace", "RGB"
-            ] + (["-rotate", str(config["rotate"])] if config["rotate"] != 0 else []) + [tmp_path],
-            "desc": "fallback (simple text)",
-            "fallback": True
-        }
-    ]
-
-def try_imagemagick_command(cmd_option, timeout=120, debug=False):
-    """Try a single ImageMagick command"""
-    full_cmd = cmd_option["cmd"] + cmd_option["args"]
-
-    try:
-        result = subprocess.run(
-            full_cmd,
-            check=True,
-            capture_output=True,
-            timeout=timeout
-        )
-
-        if debug:
-            if result.stdout:
-                print(f"   ImageMagick stdout: {result.stdout.decode()}")
-            if result.stderr:
-                print(f"   ImageMagick stderr: {result.stderr.decode()}")
-
-        return True
-
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        if isinstance(e, FileNotFoundError):
-            print(f"   {cmd_option['desc']} not found: {cmd_option['cmd'][0]}")
-        elif debug:
-            stderr_msg = e.stderr.decode() if e.stderr else "No stderr"
-            stdout_msg = e.stdout.decode() if e.stdout else "No stdout"
-            print(f"   {cmd_option['desc']} failed: exit code {e.returncode}")
-            print(f"   Stdout: {stdout_msg}")
-            print(f"   Stderr: {stderr_msg}")
-        else:
-            # Show concise error
-            stderr_msg = e.stderr.decode() if e.stderr else ""
-            error_lines = [line for line in stderr_msg.split('\n')
-                          if 'error' in line.lower() or 'unable' in line.lower()]
-            error_summary = error_lines[0] if error_lines else stderr_msg.strip()
-            if error_summary:
-                print(f"   {cmd_option['desc']} failed: {error_summary}")
-
-        return False
 
 def create_text_image(text, config, debug=False):
-    """Create JPEG image from text using PIL (fallback to ImageMagick)"""
+    """Create JPEG image from text using PIL"""
     print("📏 Calculating minimal image dimensions...")
     width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
     font_size = get_adjusted_font_size(config)
@@ -308,43 +217,20 @@ def create_text_image(text, config, debug=False):
 
     tmp_path = create_temp_image_file()
 
-    # Try PIL first
+    # Create image with PIL
     print("🎨 Creating image with PIL...")
     if try_pil_image_creation(text, config, tmp_path, debug):
         print(f"✅ Image created successfully with PIL: {tmp_path}")
         return tmp_path
 
-    print("   PIL not available, falling back to ImageMagick...")
-
-    # Fallback to ImageMagick
-    print("🖼️  Creating image with ImageMagick...")
-    print("   (This may take a moment if ImageMagick needs to be downloaded)")
-
-    command_options = get_imagemagick_commands(text, config, tmp_path)
-
-    for cmd_option in command_options:
-        print(f"   Trying {cmd_option['desc']}...")
-
-        if debug:
-            full_cmd = cmd_option["cmd"] + cmd_option["args"]
-            print(f"   Command: {' '.join(full_cmd)}")
-
-        if try_imagemagick_command(cmd_option, config["imagemagick_timeout"], debug):
-            if cmd_option.get("fallback"):
-                print(f"⚠️  Created simple text image (advanced rendering failed): {tmp_path}")
-                print("   Note: Text rendering may be basic")
-            else:
-                print(f"✅ Image created successfully with {cmd_option['desc']}: {tmp_path}")
-            return tmp_path
-
-    # All methods failed
+    # PIL failed
     os.unlink(tmp_path)
     raise RuntimeError(
-        "All image creation methods failed.\n"
+        "Image creation failed.\n"
         "Solutions:\n"
-        "  • Ensure PIL/Pillow is installed\n"
-        "  • Use the Nix development environment: nix develop --command just preview-text-vertical 'your text'\n"
-        "  • Install ImageMagick system-wide: apt install imagemagick (Ubuntu/Debian) or brew install imagemagick (macOS)\n"
+        "  • Ensure PIL/Pillow is installed: pip install Pillow\n"
+        "  • Check font configuration in ~/.config/labelprinter/config.json\n"
+        "  • Verify the font file exists and is readable\n"
     )
 
 PRINT_TIMEOUT = 120  # 2 minutes
