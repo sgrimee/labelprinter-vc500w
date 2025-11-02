@@ -15,7 +15,6 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             just
-            imagemagick
             chafa  # Terminal image viewer
             python3
             python3Packages.pillow
