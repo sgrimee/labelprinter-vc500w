@@ -21,7 +21,7 @@ def get_default_config():
         # Printer settings
         "host": "VC-500W4188.local",
         "label_width_mm": 25,
-        "font_size": 10,  # Small font for 2-3 lines on 25mm label
+        "font_size": 104,  # ~1/3 of label width for optimal readability (25mm tape)
         "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
         "padding": 50,
         "rotate": 0,
@@ -75,7 +75,17 @@ def save_config(config):
 # Constants are now loaded from config file
 
 def calculate_minimal_image_dimensions(text, config):
-    """Calculate minimal image dimensions to fit text with minimal waste"""
+    """Calculate minimal image dimensions to fit text with minimal waste
+    
+    IMPORTANT REQUIREMENTS FOR HORIZONTAL TEXT:
+    1. Image HEIGHT must equal full label width (e.g., 312px for 25mm tape)
+       - This prevents printer from auto-scaling and enlarging text
+    2. Image WIDTH is cut to exact text width (no horizontal padding)
+       - This minimizes label waste
+    3. Text height should occupy ~1/3 of label width (adjust font_size to ~104)
+       - Text is vertically centered with white padding above/below
+    4. Text is left-aligned horizontally (x=0)
+    """
     font_size = get_adjusted_font_size(config)
 
     # Load font to measure text
@@ -95,8 +105,9 @@ def calculate_minimal_image_dimensions(text, config):
         text_height = font_size * 1.2  # Line height
         bbox = (0, 0, text_width, text_height)  # Dummy bbox
 
-    # No padding - use exact text dimensions
-    padded_width = int(text_width)
+    # Add small padding before text (about 2 characters)
+    left_padding = int(font_size * 1.2)  # Roughly 2 character widths
+    padded_width = int(text_width) + left_padding
     padded_height = int(text_height)
 
     tape_width_pixels = int(config["label_width_mm"] * config["pixels_per_mm"])
@@ -107,9 +118,9 @@ def calculate_minimal_image_dimensions(text, config):
         width = padded_height  # Text height becomes image width after rotation
         height = tape_width_pixels  # Full tape width becomes image height
     else:
-        # Horizontal text: full tape width, reasonable height for text
-        width = tape_width_pixels  # Full tape width
-        height = padded_height  # Just text height
+        # Horizontal text: text width + left padding, full tape height
+        width = padded_width  # Text width + left padding
+        height = tape_width_pixels  # Full tape width becomes image height
 
     return width, height, text_width, text_height, bbox
 
@@ -182,9 +193,9 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
             x = (width - text_height) // 2  # text_height becomes width after rotation
             y = -bbox[1]  # Position so baseline is at top
         else:
-            # Horizontal text: center both horizontally and vertically
-            x = (width - text_width) // 2
-            y = -bbox[1]  # Position so baseline is at top
+            # Horizontal text: left padding, centered vertically
+            x = int(font_size * 1.2)  # Left padding (about 2 characters)
+            y = (height - text_height) // 2 - bbox[1]  # Center vertically
 
         if debug:
             print(f"   PIL: Drawing text at ({x}, {y})")
@@ -234,9 +245,9 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
             x = (width - text_height) // 2  # text_height becomes width after rotation
             y = -bbox[1]  # Position so baseline is at top
         else:
-            # Horizontal text: center both horizontally and vertically
-            x = (width - text_width) // 2
-            y = -bbox[1]  # Position so baseline is at top
+            # Horizontal text: left padding, centered vertically
+            x = int(font_size * 1.2)  # Left padding (about 2 characters)
+            y = (height - text_height) // 2 - bbox[1]  # Center vertically
 
         if debug:
             print(f"   PIL: Drawing text at ({x}, {y})")

@@ -1,7 +1,7 @@
 {
   "host": "VC-500W4188.local",
   "label_width_mm": 25,
-  "font_size": 10,
+  "font_size": 104,
   "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
   "padding": 50,
   "rotate": 0,

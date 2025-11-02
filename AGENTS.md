@@ -9,6 +9,36 @@
 - **Run single test**: `pytest labelprinter/test/test_printer.py::TestPrinter::test_method_name`
 - **Test printer connection**: `just test-printer` or `python -m labelprinter.test.test_printer`
 - **Run main module**: `just run` or `python -m labelprinter`
+- **Generate test label**: `just preview-text "Test Label"`
+
+## Label Image Generation Requirements
+
+**CRITICAL: Follow these requirements for horizontal text labels:**
+
+1. **Image HEIGHT = Full label width** (312px for 25mm tape)
+   - The printer auto-scales images that don't match the label width
+   - If image height < label width, printer enlarges the text (bad!)
+   - Image height MUST equal `label_width_mm * pixels_per_mm`
+
+2. **Image WIDTH = Text width + left padding** (cut just after text)
+   - Left padding of ~2 characters (font_size * 1.2) before text starts
+   - No right padding - cut immediately after text
+   - Minimizes label waste while providing clean left margin
+
+3. **Text height ≈ 1/3 of label width** (~104px for 25mm tape)
+   - Text is vertically centered with white padding above/below
+   - Adjust `font_size` in config to achieve this ratio (typically ~104)
+
+4. **Text positioning**
+   - Left padding of ~2 characters: `x = int(font_size * 1.2)`
+   - Vertically centered: `y = (height - text_height) // 2 - bbox[1]`
+
+**Example for 25mm tape:**
+- Label width: 25mm = 312 pixels
+- Image dimensions: 611×312 pixels (width = text + left padding)
+- Text height: ~76-104 pixels (24-33% of label height)
+- Font size: ~104pt
+- Left padding: ~124px (~2 characters)
 
 ## Code Style Guidelines
 
