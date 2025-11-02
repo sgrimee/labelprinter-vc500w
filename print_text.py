@@ -80,11 +80,11 @@ def calculate_minimal_image_dimensions(text, config):
     IMPORTANT REQUIREMENTS FOR HORIZONTAL TEXT:
     1. Image HEIGHT must equal full label width (e.g., 312px for 25mm tape)
        - This prevents printer from auto-scaling and enlarging text
-    2. Image WIDTH is cut to exact text width (no horizontal padding)
-       - This minimizes label waste
+    2. Image WIDTH = text width + left and right padding (~2 chars each)
+       - Provides clean margins while minimizing label waste
     3. Text height should occupy ~1/3 of label width (adjust font_size to ~104)
        - Text is vertically centered with white padding above/below
-    4. Text is left-aligned horizontally (x=0)
+    4. Text has left padding of ~2 characters (font_size * 1.2)
     """
     font_size = get_adjusted_font_size(config)
 
@@ -105,9 +105,10 @@ def calculate_minimal_image_dimensions(text, config):
         text_height = font_size * 1.2  # Line height
         bbox = (0, 0, text_width, text_height)  # Dummy bbox
 
-    # Add small padding before text (about 2 characters)
+    # Add small padding before and after text (about 2 characters each)
     left_padding = int(font_size * 1.2)  # Roughly 2 character widths
-    padded_width = int(text_width) + left_padding
+    right_padding = int(font_size * 1.2)  # Same as left padding
+    padded_width = int(text_width) + left_padding + right_padding
     padded_height = int(text_height)
 
     tape_width_pixels = int(config["label_width_mm"] * config["pixels_per_mm"])
@@ -118,8 +119,8 @@ def calculate_minimal_image_dimensions(text, config):
         width = padded_height  # Text height becomes image width after rotation
         height = tape_width_pixels  # Full tape width becomes image height
     else:
-        # Horizontal text: text width + left padding, full tape height
-        width = padded_width  # Text width + left padding
+        # Horizontal text: text width + left and right padding, full tape height
+        width = padded_width  # Text width + left and right padding
         height = tape_width_pixels  # Full tape width becomes image height
 
     return width, height, text_width, text_height, bbox

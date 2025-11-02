@@ -20,10 +20,10 @@
    - If image height < label width, printer enlarges the text (bad!)
    - Image height MUST equal `label_width_mm * pixels_per_mm`
 
-2. **Image WIDTH = Text width + left padding** (cut just after text)
+2. **Image WIDTH = Text width + left and right padding**
    - Left padding of ~2 characters (font_size * 1.2) before text starts
-   - No right padding - cut immediately after text
-   - Minimizes label waste while providing clean left margin
+   - Right padding of ~2 characters (font_size * 1.2) after text ends
+   - Provides clean margins while minimizing label waste
 
 3. **Text height ≈ 1/3 of label width** (~104px for 25mm tape)
    - Text is vertically centered with white padding above/below
@@ -35,10 +35,11 @@
 
 **Example for 25mm tape:**
 - Label width: 25mm = 312 pixels
-- Image dimensions: 611×312 pixels (width = text + left padding)
+- Image dimensions: 735×312 pixels (width = text + left/right padding)
 - Text height: ~76-104 pixels (24-33% of label height)
 - Font size: ~104pt
 - Left padding: ~124px (~2 characters)
+- Right padding: ~124px (~2 characters)
 
 ## Code Style Guidelines
 
