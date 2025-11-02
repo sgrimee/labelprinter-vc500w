@@ -108,6 +108,13 @@ def print_jpeg(printer, use_lock, mode, cut, jpeg_file, wait_after_print):
     _get_configuration_and_display_connection(printer);
     status = printer.get_status();
 
+    # Check if printer is busy and wait for it to become idle
+    if status.print_state != "IDLE":
+        print('Printer is currently %s (%s, %s). Waiting for it to become idle...' % (
+            status.print_state, status.print_job_stage, status.print_job_error));
+        printer.wait_to_turn_idle();
+        print('Printer is now idle, proceeding with print job...');
+
     if use_lock:
         lock = printer.lock(); 
         print('Printer locked with message "%s", started printing job %s...' % (lock.comment, lock.job_number));
