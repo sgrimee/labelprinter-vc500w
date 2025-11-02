@@ -175,16 +175,16 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text centered in the image
+        # Position text properly accounting for font baseline
         
         if config["rotate"] == 90:
             # Vertical text: center both horizontally and vertically
             x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = (height - text_height) // 2  # Center vertically
+            y = -bbox[1]  # Position so baseline is at top
         else:
             # Horizontal text: center both horizontally and vertically
             x = (width - text_width) // 2
-            y = (height - text_height) // 2  # Center vertically
+            y = -bbox[1]  # Position so baseline is at top
 
         if debug:
             print(f"   PIL: Drawing text at ({x}, {y})")
@@ -227,16 +227,16 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text centered in the image
+        # Position text properly accounting for font baseline
         
         if config["rotate"] == 90:
             # Vertical text: center both horizontally and vertically
             x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = (height - text_height) // 2  # Center vertically
+            y = -bbox[1]  # Position so baseline is at top
         else:
             # Horizontal text: center both horizontally and vertically
             x = (width - text_width) // 2
-            y = (height - text_height) // 2  # Center vertically
+            y = -bbox[1]  # Position so baseline is at top
 
         if debug:
             print(f"   PIL: Drawing text at ({x}, {y})")
@@ -274,7 +274,7 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text centered in the image
+        # Position text properly accounting for font baseline
         if config["rotate"] == 90:
             # Vertical text: center horizontally, no top margin
             x = (width - text_height) // 2  # text_height becomes width after rotation
