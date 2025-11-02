@@ -1,0 +1,15 @@
+{
+  "host": "VC-500W4188.local",
+  "label_width_mm": 25,
+  "font_size": 24,
+  "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
+  "padding": 50,
+  "rotate": 0,
+  "pixels_per_mm": 12.48,
+  "min_font_size": 20,
+  "default_height_horizontal": 60,
+  "imagemagick_timeout": 120,
+  "print_timeout": 120,
+  "avahi_timeout": 10
+}</content>
+<parameter name="filePath">config.example.json
