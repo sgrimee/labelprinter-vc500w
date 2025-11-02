@@ -83,6 +83,7 @@ def calculate_minimal_image_dimensions(text, config):
     font = load_font_for_measurement(config.get("font"), font_size)
 
     # Measure text dimensions
+    bbox = None
     try:
         from PIL import ImageFont
         bbox = font.getbbox(text)
@@ -93,11 +94,11 @@ def calculate_minimal_image_dimensions(text, config):
         # Estimate based on font size (rough approximation)
         text_width = len(text) * font_size * 0.6  # Average character width
         text_height = font_size * 1.2  # Line height
+        bbox = (0, 0, text_width, text_height)  # Dummy bbox
 
-    # Add minimal padding
-    padding = config.get("text_padding_pixels", 2)
-    padded_width = int(text_width + (padding * 2))
-    padded_height = int(text_height + (padding * 2))
+    # No padding - use exact text dimensions
+    padded_width = int(text_width)
+    padded_height = int(text_height)
 
     tape_width_pixels = int(config["label_width_mm"] * config["pixels_per_mm"])
 
@@ -111,7 +112,7 @@ def calculate_minimal_image_dimensions(text, config):
         width = tape_width_pixels  # Full tape width
         height = padded_height  # Minimal height to fit text
 
-    return width, height, text_width, text_height
+    return width, height, text_width, text_height, bbox
 
 def load_font_for_measurement(font_path, font_size):
     """Load font for text measurement, with fallbacks"""
@@ -136,8 +137,8 @@ def load_font_for_measurement(font_path, font_size):
         return DummyFont()
 
 def get_adjusted_font_size(config):
-    """Get font size optimized for thermal printing"""
-    return max(config["font_size"], config["min_font_size"])
+    """Get font size from config (no minimum constraint)"""
+    return config["font_size"]
 
 def create_temp_image_file():
     """Create a temporary JPEG file"""
@@ -155,7 +156,7 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         return False
 
     try:
-        width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
+        width, height, text_width, text_height, bbox = calculate_minimal_image_dimensions(text, config)
         font_size = get_adjusted_font_size(config)
 
         if debug:
@@ -170,16 +171,16 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text with minimal padding
-        padding = config.get("text_padding_pixels", 2)
+        # Position text with no padding, accounting for font baseline
+        
         if config["rotate"] == 90:
-            # Vertical text: center horizontally, minimal top margin
+            # Vertical text: center horizontally, adjust for font baseline
             x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = padding  # Minimal top margin
+            y = -bbox[1] if bbox else 0  # Adjust for font baseline offset
         else:
-            # Horizontal text: center horizontally, minimal top margin
+            # Horizontal text: center horizontally, adjust for font baseline
             x = (width - text_width) // 2
-            y = padding  # Minimal top margin
+            y = -bbox[1] if bbox else 0  # Adjust for font baseline offset
 
         if debug:
             print(f"   PIL: Drawing text at ({x}, {y})")
@@ -207,7 +208,7 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         return False
 
     try:
-        width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
+        width, height, text_width, text_height, bbox = calculate_minimal_image_dimensions(text, config)
         font_size = get_adjusted_font_size(config)
 
         if debug:
@@ -222,16 +223,16 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text with minimal padding
-        padding = config.get("text_padding_pixels", 2)
+        # Position text with no padding, accounting for font baseline
+        
         if config["rotate"] == 90:
-            # Vertical text: center horizontally, minimal top margin
+            # Vertical text: center horizontally, adjust for font baseline
             x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = padding  # Minimal top margin
+            y = -bbox[1] if bbox else 0  # Adjust for font baseline offset
         else:
-            # Horizontal text: center horizontally, minimal top margin
+            # Horizontal text: center horizontally, adjust for font baseline
             x = (width - text_width) // 2
-            y = padding  # Minimal top margin
+            y = -bbox[1] if bbox else 0  # Adjust for font baseline offset
 
         if debug:
             print(f"   PIL: Drawing text at ({x}, {y})")
@@ -259,7 +260,7 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         return False
 
     try:
-        width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
+        width, height, text_width, text_height, bbox = calculate_minimal_image_dimensions(text, config)
         font_size = get_adjusted_font_size(config)
 
         # Load font
@@ -269,16 +270,18 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text with minimal padding
-        padding = config.get("text_padding_pixels", 2)
+        # Position text with no padding, accounting for font baseline
         if config["rotate"] == 90:
-            # Vertical text: center horizontally, minimal top margin
+            # Vertical text: center horizontally, no top margin
             x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = padding  # Minimal top margin
+            y = 0  # No top margin
         else:
-            # Horizontal text: center horizontally, minimal top margin
+            # Horizontal text: center horizontally, adjust for font baseline
             x = (width - text_width) // 2
-            y = padding  # Minimal top margin
+            y = -bbox[1]  # Adjust for font baseline offset
+
+        if debug:
+            print(f"   PIL: Drawing text at ({x}, {y})")
 
         draw.text((x, y), text, fill='black', font=font)
 
@@ -315,7 +318,7 @@ def load_font(font_path, font_size):
 def create_text_image(text, config, debug=False):
     """Create JPEG image from text using PIL"""
     print("📏 Calculating minimal image dimensions...")
-    width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
+    width, height, text_width, text_height, bbox = calculate_minimal_image_dimensions(text, config)
     font_size = get_adjusted_font_size(config)
 
     print(f"   Image size: {width}x{height} pixels ({text_width}x{text_height} text) for {config['label_width_mm']}mm tape")
