@@ -23,8 +23,8 @@ install:
 
 # Print horizontal text label
 print-text text:
-    source .venv/bin/activate && python3 print_text.py "{{text}}" --rotate 0
+    label-text "{{text}}" --rotate 0
 
 # Preview text label (dry-run + preview)
 preview-text text:
-    source .venv/bin/activate && python3 print_text.py "{{text}}" --rotate 0 --dry-run --preview
+    label-text "{{text}}" --rotate 0 --dry-run --preview

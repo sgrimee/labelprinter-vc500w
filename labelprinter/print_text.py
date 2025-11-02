@@ -362,8 +362,16 @@ PRINT_TIMEOUT = 120  # 2 minutes
 
 def build_print_command(image_path, config):
     """Build the command to print the label"""
-    return [
-        "python", "-m", "labelprinter",
+    # Try to use the installed label-raw command, fallback to python -m
+    import shutil
+    labelprinter_cmd = shutil.which("label-raw")
+    if labelprinter_cmd:
+        base_cmd = [labelprinter_cmd]
+    else:
+        # Fallback for development mode
+        base_cmd = ["python", "-m", "labelprinter"]
+    
+    return base_cmd + [
         "--host", config["host"],
         "--print-jpeg", image_path,
         "--print-mode", "vivid",
