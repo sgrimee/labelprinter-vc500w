@@ -18,12 +18,23 @@ CONFIG_FILE = Path.home() / ".config" / "labelprinter" / "config.json"
 def get_default_config():
     """Get default configuration values"""
     return {
+        # Printer settings
         "host": "VC-500W4188.local",
         "label_width_mm": 25,
         "font_size": 24,
         "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
         "padding": 50,
-        "rotate": 0
+        "rotate": 0,
+
+        # Image generation settings
+        "pixels_per_mm": 12.48,  # Brother VC-500W resolution: ~317 lpi
+        "min_font_size": 20,
+        "text_padding_pixels": 2,  # Minimal padding around text for readability
+
+        # Timeout settings
+        "imagemagick_timeout": 120,  # 2 minutes
+        "print_timeout": 120,  # 2 minutes
+        "avahi_timeout": 10,  # 10 seconds
     }
 
 def load_config():
@@ -63,28 +74,71 @@ def save_config(config):
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=2)
 
-# Constants for image creation
-PIXELS_PER_MM = 12.48  # Brother VC-500W resolution: ~317 lpi
-MIN_FONT_SIZE = 20
-DEFAULT_HEIGHT_HORIZONTAL = 60  # Fixed height for 25mm tape
-IMAGEMAGICK_TIMEOUT = 120
+# Constants are now loaded from config file
 
-def calculate_image_dimensions(config):
-    """Calculate optimal image dimensions for the label"""
-    width = int(config["label_width_mm"] * PIXELS_PER_MM)
+def calculate_minimal_image_dimensions(text, config):
+    """Calculate minimal image dimensions to fit text with minimal waste"""
+    font_size = get_adjusted_font_size(config)
+
+    # Load font to measure text
+    font = load_font_for_measurement(config.get("font"), font_size)
+
+    # Measure text dimensions
+    try:
+        from PIL import ImageFont
+        bbox = font.getbbox(text)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+    except:
+        # Fallback if PIL not available or font loading fails
+        # Estimate based on font size (rough approximation)
+        text_width = len(text) * font_size * 0.6  # Average character width
+        text_height = font_size * 1.2  # Line height
+
+    # Add minimal padding
+    padding = config.get("text_padding_pixels", 2)
+    padded_width = int(text_width + (padding * 2))
+    padded_height = int(text_height + (padding * 2))
+
+    tape_width_pixels = int(config["label_width_mm"] * config["pixels_per_mm"])
 
     if config["rotate"] == 90:
-        # Vertical labels: tall narrow image
-        height = int(width * 1.2)
+        # Vertical text: width becomes height after rotation
+        # Use minimal width, full tape height
+        width = padded_height  # Text height becomes image width after rotation
+        height = tape_width_pixels  # Full tape width becomes image height
     else:
-        # Horizontal labels: fixed height for 2-line capacity
-        height = DEFAULT_HEIGHT_HORIZONTAL
+        # Horizontal text: use full tape width, minimal height
+        width = tape_width_pixels  # Full tape width
+        height = padded_height  # Minimal height to fit text
 
-    return width, height
+    return width, height, text_width, text_height
+
+def load_font_for_measurement(font_path, font_size):
+    """Load font for text measurement, with fallbacks"""
+    try:
+        from PIL import ImageFont
+        if font_path and os.path.exists(font_path):
+            return ImageFont.truetype(font_path, font_size)
+    except:
+        pass
+
+    try:
+        from PIL import ImageFont
+        return ImageFont.load_default()
+    except ImportError:
+        # Return a dummy object if PIL not available
+        class DummyFont:
+            def getbbox(self, text):
+                # Rough estimation
+                width = len(text) * font_size * 0.6
+                height = font_size * 1.2
+                return (0, 0, width, height)
+        return DummyFont()
 
 def get_adjusted_font_size(config):
     """Get font size optimized for thermal printing"""
-    return max(config["font_size"], MIN_FONT_SIZE)
+    return max(config["font_size"], config["min_font_size"])
 
 def create_temp_image_file():
     """Create a temporary JPEG file"""
@@ -100,22 +154,26 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         return False
 
     try:
-        width, height = calculate_image_dimensions(config)
+        width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
         font_size = get_adjusted_font_size(config)
 
         # Load font
         font = load_font(config.get("font"), font_size)
 
-        # Create and draw image
+        # Create image with minimal dimensions
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Center text
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        x = (width - text_width) // 2
-        y = (height - text_height) // 2
+        # Position text with minimal padding
+        padding = config.get("text_padding_pixels", 2)
+        if config["rotate"] == 90:
+            # Vertical text: center horizontally, minimal top margin
+            x = (width - text_height) // 2  # text_height becomes width after rotation
+            y = padding  # Minimal top margin
+        else:
+            # Horizontal text: center horizontally, minimal top margin
+            x = (width - text_width) // 2
+            y = padding  # Minimal top margin
 
         draw.text((x, y), text, fill='black', font=font)
 
@@ -147,9 +205,9 @@ def load_font(font_path, font_size):
     except ImportError:
         raise RuntimeError("PIL/Pillow not available for font loading")
 
-def get_imagemagick_commands(config, tmp_path):
+def get_imagemagick_commands(text, config, tmp_path):
     """Get ImageMagick command options to try"""
-    width, height = calculate_image_dimensions(config)
+    width, height, _, _ = calculate_minimal_image_dimensions(text, config)
     font_size = get_adjusted_font_size(config)
 
     base_args = [
@@ -199,7 +257,7 @@ def get_imagemagick_commands(config, tmp_path):
         }
     ]
 
-def try_imagemagick_command(cmd_option, debug=False):
+def try_imagemagick_command(cmd_option, timeout=120, debug=False):
     """Try a single ImageMagick command"""
     full_cmd = cmd_option["cmd"] + cmd_option["args"]
 
@@ -208,7 +266,7 @@ def try_imagemagick_command(cmd_option, debug=False):
             full_cmd,
             check=True,
             capture_output=True,
-            timeout=IMAGEMAGICK_TIMEOUT
+            timeout=timeout
         )
 
         if debug:
@@ -241,11 +299,11 @@ def try_imagemagick_command(cmd_option, debug=False):
 
 def create_text_image(text, config, debug=False):
     """Create JPEG image from text using PIL (fallback to ImageMagick)"""
-    print("📏 Calculating image dimensions...")
-    width, height = calculate_image_dimensions(config)
+    print("📏 Calculating minimal image dimensions...")
+    width, height, text_width, text_height = calculate_minimal_image_dimensions(text, config)
     font_size = get_adjusted_font_size(config)
 
-    print(f"   Image size: {width}x{height} pixels for {config['label_width_mm']}mm tape")
+    print(f"   Image size: {width}x{height} pixels ({text_width}x{text_height} text) for {config['label_width_mm']}mm tape")
     print(f"   Using font size: {font_size} (thermal optimized)")
 
     tmp_path = create_temp_image_file()
@@ -262,9 +320,7 @@ def create_text_image(text, config, debug=False):
     print("🖼️  Creating image with ImageMagick...")
     print("   (This may take a moment if ImageMagick needs to be downloaded)")
 
-    # Add text to config for ImageMagick commands
-    imagemagick_config = {**config, "text": text}
-    command_options = get_imagemagick_commands(imagemagick_config, tmp_path)
+    command_options = get_imagemagick_commands(text, config, tmp_path)
 
     for cmd_option in command_options:
         print(f"   Trying {cmd_option['desc']}...")
@@ -273,7 +329,7 @@ def create_text_image(text, config, debug=False):
             full_cmd = cmd_option["cmd"] + cmd_option["args"]
             print(f"   Command: {' '.join(full_cmd)}")
 
-        if try_imagemagick_command(cmd_option, debug):
+        if try_imagemagick_command(cmd_option, config["imagemagick_timeout"], debug):
             if cmd_option.get("fallback"):
                 print(f"⚠️  Created simple text image (advanced rendering failed): {tmp_path}")
                 print("   Note: Text rendering may be basic")

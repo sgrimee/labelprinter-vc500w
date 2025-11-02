@@ -7,7 +7,7 @@
   "rotate": 0,
   "pixels_per_mm": 12.48,
   "min_font_size": 20,
-  "default_height_horizontal": 60,
+  "text_padding_pixels": 2,
   "imagemagick_timeout": 120,
   "print_timeout": 120,
   "avahi_timeout": 10
