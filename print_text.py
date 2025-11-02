@@ -21,15 +21,14 @@ def get_default_config():
         # Printer settings
         "host": "VC-500W4188.local",
         "label_width_mm": 25,
-        "font_size": 24,
+        "font_size": 10,  # Small font for 2-3 lines on 25mm label
         "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
         "padding": 50,
         "rotate": 0,
 
         # Image generation settings
         "pixels_per_mm": 12.48,  # Brother VC-500W resolution: ~317 lpi
-        "min_font_size": 20,
-        "text_padding_pixels": 2,  # Minimal padding around text for readability
+        "text_padding_pixels": 0,  # No padding for minimal waste
 
         # Timeout settings
         "print_timeout": 120,  # 2 minutes
@@ -108,9 +107,9 @@ def calculate_minimal_image_dimensions(text, config):
         width = padded_height  # Text height becomes image width after rotation
         height = tape_width_pixels  # Full tape width becomes image height
     else:
-        # Horizontal text: use full tape width, minimal height
-        width = tape_width_pixels  # Full tape width
-        height = padded_height  # Minimal height to fit text
+        # Horizontal text: minimal width (text only), full height for vertical centering
+        width = padded_width  # Just text width
+        height = tape_width_pixels  # Full tape height for vertical centering
 
     return width, height, text_width, text_height, bbox
 
@@ -171,16 +170,16 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text with no padding, accounting for font baseline
+        # Position text centered in the image
         
         if config["rotate"] == 90:
-            # Vertical text: center horizontally, adjust for font baseline
+            # Vertical text: center both horizontally and vertically
             x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = -bbox[1] if bbox else 0  # Adjust for font baseline offset
+            y = (height - text_height) // 2  # Center vertically
         else:
-            # Horizontal text: center horizontally, adjust for font baseline
+            # Horizontal text: center both horizontally and vertically
             x = (width - text_width) // 2
-            y = -bbox[1] if bbox else 0  # Adjust for font baseline offset
+            y = (height - text_height) // 2  # Center vertically
 
         if debug:
             print(f"   PIL: Drawing text at ({x}, {y})")
@@ -223,16 +222,16 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text with no padding, accounting for font baseline
+        # Position text centered in the image
         
         if config["rotate"] == 90:
-            # Vertical text: center horizontally, adjust for font baseline
+            # Vertical text: center both horizontally and vertically
             x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = -bbox[1] if bbox else 0  # Adjust for font baseline offset
+            y = (height - text_height) // 2  # Center vertically
         else:
-            # Horizontal text: center horizontally, adjust for font baseline
+            # Horizontal text: center both horizontally and vertically
             x = (width - text_width) // 2
-            y = -bbox[1] if bbox else 0  # Adjust for font baseline offset
+            y = (height - text_height) // 2  # Center vertically
 
         if debug:
             print(f"   PIL: Drawing text at ({x}, {y})")
@@ -270,13 +269,13 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         img = Image.new('RGB', (width, height), color='white')
         draw = ImageDraw.Draw(img)
 
-        # Position text with no padding, accounting for font baseline
+        # Position text centered in the image
         if config["rotate"] == 90:
             # Vertical text: center horizontally, no top margin
             x = (width - text_height) // 2  # text_height becomes width after rotation
             y = 0  # No top margin
         else:
-            # Horizontal text: center horizontally, adjust for font baseline
+            # Horizontal text: center both horizontally and vertically
             x = (width - text_width) // 2
             y = -bbox[1]  # Adjust for font baseline offset
 
