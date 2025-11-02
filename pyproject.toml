@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "labelprinter"
+version = "0.1.0"
+description = "Brother VC-500W label printer control"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "pillow>=8.0.0",
+]
+
+[project.scripts]
+labelprinter = "labelprinter.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["labelprinter*"]
