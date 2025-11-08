@@ -145,8 +145,8 @@ class QueueWorker:
             "--print-jpeg", str(job_file)
         ]
 
-        if self.verbose:
-            cmd.append("--debug")
+        # Note: label-raw doesn't have --debug flag
+        # Verbose output is handled by capturing stderr
 
         # Execute label-raw
         try:
@@ -209,31 +209,50 @@ class QueueWorker:
             self.log(f"Warning: Error marking job {job_id} as failed: {e}", force=True)
             return False
 
-    def process_queue(self, continuous=False, retry_delay=30):
+    def process_queue(self, continuous=False, watch=False, retry_delay=30, poll_interval=5):
         """
         Process all pending jobs in the queue
 
         Args:
             continuous: If True, keep processing until queue is empty
+            watch: If True, keep running and wait for new jobs (daemon mode)
             retry_delay: Seconds to wait before retrying busy printer
+            poll_interval: Seconds to wait before checking for new jobs in watch mode
         """
         processed = 0
         failed = 0
         busy_jobs = []
         failed_jobs = []  # Track jobs that failed in this run (don't retry)
 
+        if watch:
+            self.log("👀 Watch mode enabled - worker will keep running until stopped (Ctrl+C)", force=True)
+
         while True:
             jobs = self.get_held_jobs()
 
-            if not jobs:
-                if continuous and busy_jobs:
+            # Check if all jobs are already failed in this run
+            new_jobs = [job for job in jobs if job[0] not in failed_jobs]
+
+            if not new_jobs:
+                if busy_jobs:
+                    # Have busy jobs to retry
                     self.log(f"\nWaiting {retry_delay}s before retrying {len(busy_jobs)} busy job(s)...", force=True)
                     time.sleep(retry_delay)
                     continue
+                elif watch:
+                    # Watch mode: wait for new jobs
+                    # (all current jobs have already failed)
+                    if failed_jobs:
+                        self.log(f"All {len(failed_jobs)} job(s) failed. Waiting {poll_interval}s for new jobs...", force=False)
+                    else:
+                        self.log(f"Queue empty, waiting {poll_interval}s for new jobs...", force=False)
+                    time.sleep(poll_interval)
+                    continue
                 else:
+                    # Not watch mode and no new jobs: exit
                     break
 
-            self.log(f"\nFound {len(jobs)} job(s) to process", force=True)
+            self.log(f"\nFound {len(new_jobs)} job(s) to process", force=True)
 
             for job_id, job_info in jobs:
                 # Skip jobs we've already failed in this run
@@ -256,10 +275,12 @@ class QueueWorker:
                     failed_jobs.append(job_id)  # Don't retry this job in this run
                     failed += 1
 
-            if not continuous:
+            # In watch mode, keep going after processing batch
+            # In one-shot mode, exit after processing once
+            if not continuous and not watch:
                 break
 
-        # Summary
+        # Summary (only shown when exiting, not in watch mode)
         self.log(f"\n{'='*60}", force=True)
         self.log(f"Queue processing complete", force=True)
         self.log(f"  Processed: {processed}", force=True)
@@ -288,10 +309,21 @@ def main():
         help='Keep processing until queue is empty (retry busy jobs)'
     )
     parser.add_argument(
+        '--watch', '-w',
+        action='store_true',
+        help='Keep running and wait for new jobs (daemon mode). Use Ctrl+C to stop.'
+    )
+    parser.add_argument(
         '--retry-delay',
         type=int,
         default=30,
         help='Seconds to wait before retrying busy jobs (default: 30)'
+    )
+    parser.add_argument(
+        '--poll-interval',
+        type=int,
+        default=5,
+        help='Seconds to wait before checking for new jobs in watch mode (default: 5)'
     )
     parser.add_argument(
         '--dry-run',
@@ -328,19 +360,21 @@ def main():
     try:
         processed, failed, busy = worker.process_queue(
             continuous=args.continuous,
-            retry_delay=args.retry_delay
+            watch=args.watch,
+            retry_delay=args.retry_delay,
+            poll_interval=args.poll_interval
         )
 
         # Exit code indicates if there were failures
         if failed > 0:
             sys.exit(1)
-        elif busy > 0 and not args.continuous:
+        elif busy > 0 and not args.continuous and not args.watch:
             sys.exit(2)  # Jobs waiting due to busy printer
         else:
             sys.exit(0)
 
     except KeyboardInterrupt:
-        print("\n\nInterrupted by user", file=sys.stderr)
+        print("\n\n⏹  Worker stopped by user", file=sys.stderr)
         sys.exit(130)
     except Exception as e:
         print(f"\nERROR: {e}", file=sys.stderr)
