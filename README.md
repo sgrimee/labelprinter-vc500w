@@ -349,7 +349,10 @@ For scenarios where the printer may be busy or you want to batch print jobs, you
 Once CUPS mode is enabled, `label-text` will automatically queue jobs instead of printing directly:
 
 ```bash
-# Submit a job to the queue (returns immediately)
+# Start the worker daemon (in a separate terminal or as background service)
+label-queue-worker
+
+# Submit jobs (they'll be processed automatically)
 label-text "Label 1"
 label-text "Label 2"
 label-text "Label 3"
@@ -357,11 +360,7 @@ label-text "Label 3"
 # View pending jobs
 label-queue list
 
-# Process all queued jobs
-label-queue-worker
-
-# Or process continuously (retry on busy)
-label-queue-worker --continuous
+# Jobs are processed automatically by the daemon!
 ```
 
 ### Queue Management Commands
@@ -380,10 +379,13 @@ label-queue cancel 123 --purge  # Cancel and delete job data
 ```
 
 **`label-queue-worker`** - Process queued jobs
+
+By default, the worker runs as a daemon (keeps running and waits for new jobs):
+
 ```bash
-label-queue-worker                # Process once, exit when done
-label-queue-worker --continuous   # Keep processing until queue empty
-label-queue-worker --dry-run      # Show what would be printed
+label-queue-worker                # Daemon mode (keeps running)
+label-queue-worker --once         # Process current batch and exit (for cron)
+label-queue-worker --dry-run      # Test mode (no actual printing)
 label-queue-worker --verbose      # Show detailed output
 ```
 
@@ -392,18 +394,47 @@ label-queue-worker --verbose      # Show detailed output
 label-queue status
 ```
 
-### Advanced Queue Worker Options
+### Queue Worker Modes
+
+**Daemon Mode (Default):**
+- Keeps running and monitors the queue
+- Processes jobs immediately as they arrive
+- Retries jobs if printer is busy
+- Press Ctrl+C to stop
+
+```bash
+# Start worker as daemon
+label-queue-worker
+
+# With custom polling interval (default: 5s)
+label-queue-worker --poll-interval 10
+
+# Show what's happening
+label-queue-worker --verbose
+```
+
+**One-Shot Mode (--once):**
+- Process current batch and exit
+- Useful for cron jobs or manual runs
+- Exits when queue is empty or all jobs processed
+
+```bash
+# Process current jobs and exit
+label-queue-worker --once
+
+# For cron: process every 5 minutes
+*/5 * * * * label-queue-worker --once
+```
+
+### Advanced Options
 
 The queue worker handles printer busy states automatically:
 
 ```bash
-# Process jobs with custom retry delay (default: 30s)
-label-queue-worker --continuous --retry-delay 60
+# Custom retry delay for busy printer (default: 30s)
+label-queue-worker --retry-delay 60
 
-# Show detailed debug output
-label-queue-worker --verbose
-
-# Test without actually printing
+# Test mode without printing
 label-queue-worker --dry-run
 ```
 
