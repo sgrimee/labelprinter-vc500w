@@ -37,6 +37,13 @@ def get_default_config():
         # Timeout settings
         "print_timeout": 120,  # 2 minutes
         "avahi_timeout": 10,  # 10 seconds
+
+        # CUPS queue settings (optional)
+        "cups": {
+            "enabled": False,  # Set to True to use CUPS queue mode
+            "queue_name": "BrotherVC500W",  # Name of CUPS printer queue
+            "auto_process": False  # Auto-process jobs (requires daemon)
+        }
     }
 
 def load_config():
@@ -410,6 +417,57 @@ def build_print_command(image_path, config):
         "--print-cut", "full"
     ]
 
+def submit_to_cups(image_path, config, debug=False):
+    """Submit print job to CUPS queue"""
+    queue_name = config.get('cups', {}).get('queue_name', 'BrotherVC500W')
+
+    print(f"📬 Submitting job to CUPS queue '{queue_name}'...")
+
+    try:
+        # Use lp command to submit to CUPS
+        cmd = [
+            "lp",
+            "-d", queue_name,
+            "-o", "fit-to-page",
+            "-t", f"Label: {Path(image_path).stem}",  # Job title
+            str(image_path)
+        ]
+
+        if debug:
+            print(f"   Command: {' '.join(cmd)}")
+
+        result = subprocess.run(
+            cmd,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        # lp outputs "request id is QueueName-JobID"
+        if result.stdout:
+            job_info = result.stdout.strip()
+            print(f"✓ Job queued: {job_info}")
+            print(f"   Image: {image_path}")
+            print("\nJob submitted successfully!")
+            print("To process queued jobs, run: label-queue-worker")
+            print("To view queue status, run: label-queue list")
+
+        return 0
+
+    except subprocess.TimeoutExpired:
+        print(f"❌ Error: CUPS submission timed out", file=sys.stderr)
+        return 1
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr.strip() if e.stderr else "No error details"
+        print(f"❌ Error submitting to CUPS: {stderr_msg}", file=sys.stderr)
+        print(f"\nMake sure CUPS queue is configured. Run: label-queue-setup", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"❌ Error: {e}", file=sys.stderr)
+        return 1
+
+
 def print_label(image_path, config, debug=False):
     """Print the label using the main labelprinter module"""
     print("🔗 Building print command...")
@@ -576,14 +634,25 @@ def preview_image(image_path):
 
 def handle_printing(image_path, config, args):
     """Handle the printing phase"""
-    print("\n🖨️  Phase 2: Printing label...")
-    result = print_label(image_path, config, debug=args.debug)
-    if result == 1:
-        # Error already printed by print_label
-        return 1
-    print("\n✅ Print complete!")
-    print(f"   Image saved: {image_path}")
-    return 0
+    # Check if CUPS mode is enabled
+    cups_enabled = config.get('cups', {}).get('enabled', False)
+
+    if cups_enabled:
+        print("\n📬 Phase 2: Submitting to CUPS queue...")
+        result = submit_to_cups(image_path, config, debug=args.debug)
+        if result == 1:
+            return 1
+        print(f"\n   Image saved: {image_path}")
+        return 0
+    else:
+        print("\n🖨️  Phase 2: Printing label...")
+        result = print_label(image_path, config, debug=args.debug)
+        if result == 1:
+            # Error already printed by print_label
+            return 1
+        print("\n✅ Print complete!")
+        print(f"   Image saved: {image_path}")
+        return 0
 
 def main():
     parser = setup_argument_parser()

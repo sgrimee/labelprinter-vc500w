@@ -8,6 +8,7 @@ Python CLI tools for controlling the [Brother VC-500W](https://www.brother.com/l
 - 📊 Check printer status and tape remaining
 - ⚙️ Configure via JSON config file
 - 🔧 Horizontal and vertical text support
+- 📬 Optional CUPS queue mode with job management
 - 🚀 Easy installation with `uv tool` or Nix
 
 Fork from [m7i.org/projects/labelprinter-linux-python-for-vc-500w](https://m7i.org/projects/labelprinter-linux-python-for-vc-500w/)
@@ -275,6 +276,164 @@ label-raw --host VC-500W.local --get-status --json
 label-raw --host VC-500W.local --print-jpeg image.jpg \
   --print-mode normal --print-cut half
 ```
+
+---
+
+## CUPS Queue Management (Optional)
+
+For scenarios where the printer may be busy or you want to batch print jobs, you can enable CUPS queue mode. This allows jobs to be queued and processed when the printer is available, preventing lost print requests.
+
+### Why Use CUPS Queue Mode?
+
+**Problem**: When the CLI blocks waiting for the printer and fails because the printer is busy, the print request is lost.
+
+**Solution**: CUPS queue mode provides:
+- **Fire-and-forget printing**: Commands return immediately after queuing
+- **Automatic retry**: Jobs wait in queue until printer is available
+- **Job management**: View, cancel, and manage pending print jobs
+- **Standard interface**: Uses CUPS, the standard printing system on Unix/Linux
+
+### Setup
+
+1. **Install CUPS** (if not already installed):
+   ```bash
+   # Debian/Ubuntu
+   sudo apt install cups
+
+   # Fedora/RHEL
+   sudo dnf install cups
+
+   # Arch Linux
+   sudo pacman -S cups
+
+   # macOS - CUPS is pre-installed
+   ```
+
+2. **Install with CUPS support**:
+   ```bash
+   # With uv tool
+   uv tool install --with pycups /path/to/labelprinter-vc500w
+   # Or if already installed
+   uv tool install --force --with pycups /path/to/labelprinter-vc500w
+
+   # With pip
+   pip install pycups
+   ```
+
+   **Note**: `pycups` requires a C compiler and CUPS development libraries. On some systems you may need:
+   ```bash
+   # Debian/Ubuntu
+   sudo apt install libcups2-dev gcc python3-dev
+
+   # Fedora/RHEL
+   sudo dnf install cups-devel gcc python3-devel
+   ```
+
+3. **Configure CUPS queue**:
+   ```bash
+   label-queue-setup
+   ```
+
+   This will:
+   - Create a CUPS printer queue named "BrotherVC500W"
+   - Configure it to hold jobs (not auto-print)
+   - Update your labelprinter config to enable CUPS mode
+
+4. **Verify setup**:
+   ```bash
+   label-queue-setup --check
+   ```
+
+### Usage
+
+Once CUPS mode is enabled, `label-text` will automatically queue jobs instead of printing directly:
+
+```bash
+# Submit a job to the queue (returns immediately)
+label-text "Label 1"
+label-text "Label 2"
+label-text "Label 3"
+
+# View pending jobs
+label-queue list
+
+# Process all queued jobs
+label-queue-worker
+
+# Or process continuously (retry on busy)
+label-queue-worker --continuous
+```
+
+### Queue Management Commands
+
+**`label-queue list`** - View pending jobs
+```bash
+label-queue list          # Show pending jobs
+label-queue list --all    # Show all jobs (including completed)
+```
+
+**`label-queue cancel`** - Cancel jobs
+```bash
+label-queue cancel 123      # Cancel job 123
+label-queue cancel --all    # Cancel all pending jobs
+label-queue cancel 123 --purge  # Cancel and delete job data
+```
+
+**`label-queue-worker`** - Process queued jobs
+```bash
+label-queue-worker                # Process once, exit when done
+label-queue-worker --continuous   # Keep processing until queue empty
+label-queue-worker --dry-run      # Show what would be printed
+label-queue-worker --verbose      # Show detailed output
+```
+
+**`label-queue status`** - Show queue status
+```bash
+label-queue status
+```
+
+### Advanced Queue Worker Options
+
+The queue worker handles printer busy states automatically:
+
+```bash
+# Process jobs with custom retry delay (default: 30s)
+label-queue-worker --continuous --retry-delay 60
+
+# Show detailed debug output
+label-queue-worker --verbose
+
+# Test without actually printing
+label-queue-worker --dry-run
+```
+
+### Disabling CUPS Mode
+
+To return to direct printing mode:
+
+```bash
+label-queue-setup --remove
+```
+
+This will:
+- Remove the CUPS printer queue
+- Disable CUPS mode in your config
+- Return `label-text` to direct printing behavior
+
+### How It Works
+
+When CUPS mode is enabled:
+
+1. **`label-text`** creates the label image and submits it to the CUPS queue (fire-and-forget)
+2. Jobs remain in "held" state in CUPS
+3. **`label-queue-worker`** processes held jobs:
+   - Reads jobs from CUPS queue
+   - Sends them to the printer using existing `label-raw` logic
+   - Handles "printer busy" errors with automatic retry
+   - Marks jobs as completed or failed
+4. **`label-queue`** provides job management (list, cancel, status)
+
+This hybrid approach gives you CUPS benefits (standard queue interface, job persistence) while using your custom printer protocol for actual printing.
 
 ---
 
