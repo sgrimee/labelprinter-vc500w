@@ -142,7 +142,7 @@ class QueueWorker:
         cmd = [
             "label-raw",
             "--host", self.config['host'],
-            str(job_file)
+            "--print-jpeg", str(job_file)
         ]
 
         if self.verbose:
@@ -194,15 +194,19 @@ class QueueWorker:
             return False
 
     def mark_job_failed(self, job_id, error_message):
-        """Mark a job as failed (for now, just cancel it)"""
+        """
+        Mark a job as failed
+
+        Leaves the job in the queue so user can investigate and retry manually.
+        User can cancel with: label-queue cancel <job_id>
+        """
         try:
-            # In a more sophisticated system, we might move to a dead letter queue
-            # For now, we'll just cancel with a message
-            self.log(f"Canceling failed job {job_id}: {error_message}", force=True)
-            self.conn.cancelJob(job_id, purge_job=False)
+            self.log(f"✗ Job {job_id} FAILED: {error_message}", force=True)
+            self.log(f"  Job {job_id} remains in queue. To cancel: label-queue cancel {job_id}", force=True)
+            # Don't cancel - leave in queue for manual intervention
             return True
-        except cups.IPPError as e:
-            self.log(f"Warning: Could not cancel job {job_id}: {e}", force=True)
+        except Exception as e:
+            self.log(f"Warning: Error marking job {job_id} as failed: {e}", force=True)
             return False
 
     def process_queue(self, continuous=False, retry_delay=30):
@@ -216,6 +220,7 @@ class QueueWorker:
         processed = 0
         failed = 0
         busy_jobs = []
+        failed_jobs = []  # Track jobs that failed in this run (don't retry)
 
         while True:
             jobs = self.get_held_jobs()
@@ -231,6 +236,11 @@ class QueueWorker:
             self.log(f"\nFound {len(jobs)} job(s) to process", force=True)
 
             for job_id, job_info in jobs:
+                # Skip jobs we've already failed in this run
+                if job_id in failed_jobs:
+                    self.log(f"  Skipping job {job_id} (already failed in this run)")
+                    continue
+
                 # Process the job (no need to release since printer is disabled, not held)
                 success, error, should_retry = self.print_job(job_id, job_info)
 
@@ -243,6 +253,7 @@ class QueueWorker:
                         self.log(f"  Job {job_id} will remain in queue for retry", force=True)
                 else:
                     self.mark_job_failed(job_id, error)
+                    failed_jobs.append(job_id)  # Don't retry this job in this run
                     failed += 1
 
             if not continuous:
@@ -255,6 +266,9 @@ class QueueWorker:
         self.log(f"  Failed: {failed}", force=True)
         if busy_jobs:
             self.log(f"  Waiting (busy): {len(busy_jobs)}", force=True)
+        if failed_jobs:
+            self.log(f"  Remaining in queue (failed): {len(failed_jobs)}", force=True)
+            self.log(f"  To cancel failed jobs: label-queue cancel <job-id>", force=True)
         self.log(f"{'='*60}", force=True)
 
         return processed, failed, len(busy_jobs)
