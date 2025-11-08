@@ -209,23 +209,28 @@ class QueueWorker:
             self.log(f"Warning: Error marking job {job_id} as failed: {e}", force=True)
             return False
 
-    def process_queue(self, continuous=False, watch=False, retry_delay=30, poll_interval=5):
+    def process_queue(self, once=False, retry_delay=30, poll_interval=5):
         """
         Process all pending jobs in the queue
 
+        By default, runs as a daemon (keeps running and waits for new jobs).
+        Use --once to process current jobs and exit.
+
         Args:
-            continuous: If True, keep processing until queue is empty
-            watch: If True, keep running and wait for new jobs (daemon mode)
+            once: If True, exit after processing current batch (for cron jobs)
             retry_delay: Seconds to wait before retrying busy printer
-            poll_interval: Seconds to wait before checking for new jobs in watch mode
+            poll_interval: Seconds to wait before checking for new jobs
         """
         processed = 0
         failed = 0
         busy_jobs = []
         failed_jobs = []  # Track jobs that failed in this run (don't retry)
 
-        if watch:
-            self.log("👀 Watch mode enabled - worker will keep running until stopped (Ctrl+C)", force=True)
+        if not once:
+            self.log("👀 Worker running in daemon mode - will keep running until stopped (Ctrl+C)", force=True)
+            self.log(f"   Polling every {poll_interval}s for new jobs", force=True)
+        else:
+            self.log("Running in one-shot mode - will exit when current batch is done", force=True)
 
         while True:
             jobs = self.get_held_jobs()
@@ -239,18 +244,18 @@ class QueueWorker:
                     self.log(f"\nWaiting {retry_delay}s before retrying {len(busy_jobs)} busy job(s)...", force=True)
                     time.sleep(retry_delay)
                     continue
-                elif watch:
-                    # Watch mode: wait for new jobs
-                    # (all current jobs have already failed)
+                elif once:
+                    # One-shot mode: exit when no more jobs
+                    break
+                else:
+                    # Daemon mode: wait for new jobs
+                    # (all current jobs have already failed or queue is empty)
                     if failed_jobs:
                         self.log(f"All {len(failed_jobs)} job(s) failed. Waiting {poll_interval}s for new jobs...", force=False)
                     else:
                         self.log(f"Queue empty, waiting {poll_interval}s for new jobs...", force=False)
                     time.sleep(poll_interval)
                     continue
-                else:
-                    # Not watch mode and no new jobs: exit
-                    break
 
             self.log(f"\nFound {len(new_jobs)} job(s) to process", force=True)
 
@@ -268,16 +273,15 @@ class QueueWorker:
                     processed += 1
                 elif should_retry:
                     busy_jobs.append(job_id)
-                    if not continuous:
-                        self.log(f"  Job {job_id} will remain in queue for retry", force=True)
+                    self.log(f"  Job {job_id} will be retried (printer busy)", force=True)
                 else:
                     self.mark_job_failed(job_id, error)
                     failed_jobs.append(job_id)  # Don't retry this job in this run
                     failed += 1
 
-            # In watch mode, keep going after processing batch
             # In one-shot mode, exit after processing once
-            if not continuous and not watch:
+            # In daemon mode, keep going
+            if once:
                 break
 
         # Summary (only shown when exiting, not in watch mode)
@@ -304,14 +308,9 @@ def main():
         help='Name of CUPS queue (defaults to config value)'
     )
     parser.add_argument(
-        '--continuous',
+        '--once',
         action='store_true',
-        help='Keep processing until queue is empty (retry busy jobs)'
-    )
-    parser.add_argument(
-        '--watch', '-w',
-        action='store_true',
-        help='Keep running and wait for new jobs (daemon mode). Use Ctrl+C to stop.'
+        help='Exit after processing current batch (for cron jobs). Default is to keep running as daemon.'
     )
     parser.add_argument(
         '--retry-delay',
@@ -323,7 +322,7 @@ def main():
         '--poll-interval',
         type=int,
         default=5,
-        help='Seconds to wait before checking for new jobs in watch mode (default: 5)'
+        help='Seconds to wait before checking for new jobs in daemon mode (default: 5)'
     )
     parser.add_argument(
         '--dry-run',
@@ -359,8 +358,7 @@ def main():
 
     try:
         processed, failed, busy = worker.process_queue(
-            continuous=args.continuous,
-            watch=args.watch,
+            once=args.once,
             retry_delay=args.retry_delay,
             poll_interval=args.poll_interval
         )
@@ -368,8 +366,8 @@ def main():
         # Exit code indicates if there were failures
         if failed > 0:
             sys.exit(1)
-        elif busy > 0 and not args.continuous and not args.watch:
-            sys.exit(2)  # Jobs waiting due to busy printer
+        elif busy > 0 and args.once:
+            sys.exit(2)  # Jobs waiting due to busy printer (only in --once mode)
         else:
             sys.exit(0)
 
