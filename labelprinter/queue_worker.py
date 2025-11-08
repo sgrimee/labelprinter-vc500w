@@ -52,36 +52,59 @@ class QueueWorker:
                 which_jobs='not-completed',
                 my_jobs=False,
                 requested_attributes=['job-id', 'job-name', 'job-state',
-                                     'job-state-reasons', 'job-originating-user-name']
+                                     'job-state-reasons', 'job-originating-user-name',
+                                     'job-printer-uri', 'document-name-supplied']
             )
+
+            self.log(f"Found {len(jobs)} total not-completed jobs")
 
             # Filter to our queue and held jobs
             held_jobs = []
             for job_id, job_info in jobs.items():
-                # CUPS job state: 4 = pending, 5 = held, 6 = processing
-                if job_info.get('job-state') in [4, 5]:  # pending or held
-                    held_jobs.append((job_id, job_info))
+                state = job_info.get('job-state')
+                doc_name = job_info.get('document-name-supplied', '')
+                self.log(f"  Job {job_id}: state={state}, document={doc_name}")
 
+                # CUPS job state: 3 = pending (stopped printer), 4 = pending, 5 = held, 6 = processing
+                if job_info.get('job-state') in [3, 4, 5]:  # pending or held
+                    held_jobs.append((job_id, job_info))
+                    self.log(f"    -> Added to processing list")
+
+            self.log(f"Total jobs to process: {len(held_jobs)}")
             return sorted(held_jobs, key=lambda x: x[0])  # Sort by job ID
 
         except cups.IPPError as e:
             self.log(f"Error getting jobs from CUPS: {e}", force=True)
             return []
 
-    def get_job_file(self, job_id):
-        """Get the file path for a CUPS job"""
+    def get_job_file(self, job_id, job_info):
+        """
+        Get the file path for a CUPS job
+
+        Since we can't access /var/spool/cups without root,
+        we use the document-name-supplied attribute which contains
+        the original filename (basename only).
+        """
         try:
-            # CUPS spool directory is typically /var/spool/cups
-            # Job files are named d<job_id>-001
-            spool_dir = Path("/var/spool/cups")
+            # document-name-supplied contains just the filename
+            doc_name = job_info.get('document-name-supplied', '')
 
-            # Try to find the job file
-            for job_file in spool_dir.glob(f"d{job_id:05d}-*"):
-                return job_file
+            if doc_name:
+                # Try as absolute path first
+                image_file = Path(doc_name)
+                if image_file.exists():
+                    self.log(f"Found image file: {image_file}")
+                    return image_file
 
-            # If not found in expected location, try alternative patterns
-            for job_file in spool_dir.glob(f"d{job_id}-*"):
-                return job_file
+                # Otherwise look in images/ directory
+                image_file = Path('images') / doc_name
+                if image_file.exists():
+                    self.log(f"Found image file: {image_file}")
+                    return image_file
+
+                self.log(f"Image file not found: {doc_name} (tried both absolute and images/)")
+            else:
+                self.log(f"No document name in job info")
 
             return None
 
@@ -103,7 +126,7 @@ class QueueWorker:
         self.log(f"{'='*60}", force=True)
 
         # Get the job file
-        job_file = self.get_job_file(job_id)
+        job_file = self.get_job_file(job_id, job_info)
         if not job_file or not job_file.exists():
             error = f"Job file not found for job {job_id}"
             self.log(f"✗ {error}", force=True)
@@ -208,12 +231,7 @@ class QueueWorker:
             self.log(f"\nFound {len(jobs)} job(s) to process", force=True)
 
             for job_id, job_info in jobs:
-                # Release the job so we can process it
-                try:
-                    self.conn.releaseJob(job_id)
-                except cups.IPPError:
-                    pass  # Might already be released
-
+                # Process the job (no need to release since printer is disabled, not held)
                 success, error, should_retry = self.print_job(job_id, job_info)
 
                 if success:
