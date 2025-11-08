@@ -45,32 +45,27 @@ def check_queue_exists(queue_name):
 
 def create_cups_queue(queue_name, description, location):
     """
-    Create a CUPS raw queue that accepts jobs but doesn't auto-print
+    Create a CUPS queue that accepts jobs but keeps them pending
 
-    We use a file:// device URI that points to /dev/null to prevent
-    automatic printing. Jobs will be processed manually by the worker.
+    We create a disabled printer that accepts jobs but doesn't process them.
     """
     try:
-        # Create a raw queue with a dummy device
+        # Create a queue without enabling it (-E)
+        # This allows jobs to queue but prevents automatic processing
         cmd = [
             "lpadmin",
             "-p", queue_name,
-            "-v", "file:///dev/null",  # Dummy device - jobs won't auto-print
+            "-v", "file:///dev/null",  # Dummy device
             "-D", description,
             "-L", location,
             "-o", "printer-is-shared=false",  # Don't share over network
-            "-E"  # Enable and accept jobs
         ]
 
         subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-        # Set the queue to hold all jobs by default
-        subprocess.run(
-            ["cupsdisable", "-H", "hold", queue_name],
-            check=True,
-            capture_output=True,
-            text=True
-        )
+        # Accept jobs but keep printer disabled/stopped
+        # This way jobs will queue but won't print
+        subprocess.run(["cupsaccept", queue_name], check=True, capture_output=True, text=True)
 
         return True
     except subprocess.CalledProcessError as e:
