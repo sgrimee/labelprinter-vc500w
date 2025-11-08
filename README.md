@@ -214,6 +214,15 @@ label-text "Your Text Here" [options]
 - `--dry-run` - Create image but don't print
 - `--preview` - Show preview in terminal (requires chafa/catimg/tiv)
 - `--debug` - Show detailed debug output
+- `--no-auto-detect` - Skip auto-detection of tape width from printer
+
+**Auto-Detection:**
+By default, `label-text` automatically queries the printer to detect the installed tape width. If the detected width differs from your config file, it will:
+- Use the detected width for printing
+- Show a warning about the mismatch
+- Suggest an appropriate font size if needed
+
+Use `--width` to explicitly override, or `--no-auto-detect` to skip detection and use config values.
 
 **Examples:**
 ```bash

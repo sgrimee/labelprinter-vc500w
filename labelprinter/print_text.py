@@ -13,6 +13,10 @@ import sys
 import time
 from pathlib import Path
 
+# Import printer communication classes for tape detection
+from labelprinter.connection import Connection
+from labelprinter.printer import LabelPrinter
+
 CONFIG_FILE = Path.home() / ".config" / "labelprinter" / "config.json"
 
 def get_default_config():
@@ -71,6 +75,34 @@ def save_config(config):
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=2)
+
+def detect_tape_width(host, port=9100, timeout=10):
+    """
+    Detect the tape width from the printer
+
+    Returns:
+        tuple: (detected_width_mm, error_message)
+        - If successful: (width_mm, None)
+        - If failed: (None, error_message)
+    """
+    try:
+        print(f"🔍 Detecting tape width from printer at {host}...")
+        connection = Connection(host, port)
+        printer = LabelPrinter(connection)
+
+        config = printer.get_configuration()
+
+        if config.tape_width:
+            # Convert inches to mm
+            width_mm = round(config.tape_width * 25.4)
+            print(f"   ✓ Detected {width_mm}mm tape installed")
+            return (width_mm, None)
+        else:
+            return (None, "No tape detected in printer")
+
+    except Exception as e:
+        error_msg = f"Could not detect tape width: {str(e)}"
+        return (None, error_msg)
 
 # Constants are now loaded from config file
 
@@ -474,6 +506,8 @@ def setup_argument_parser():
                        help='Preview image using terminal image viewer if available')
     parser.add_argument('--debug', action='store_true',
                        help='Show detailed command output and debugging info')
+    parser.add_argument('--no-auto-detect', action='store_true',
+                       help='Skip auto-detection of tape width from printer')
     return parser
 
 def apply_config_overrides(config, args):
@@ -567,6 +601,30 @@ def main():
 
     # Apply overrides
     overrides = apply_config_overrides(config, args)
+
+    # Auto-detect tape width from printer if not explicitly overridden
+    if not args.width and not args.no_auto_detect:
+        detected_width, error = detect_tape_width(config['host'])
+        if detected_width:
+            config_width = config['label_width_mm']
+            if detected_width != config_width:
+                print(f"   ⚠️  Warning: Config has {config_width}mm but printer has {detected_width}mm tape")
+                print(f"   → Using detected {detected_width}mm tape width")
+                config['label_width_mm'] = detected_width
+                overrides.append(f"Auto-detected width: {detected_width}mm")
+
+                # Suggest font size adjustment if not manually specified
+                if not args.font_size:
+                    # Recommend font size based on tape width (~1/3 of height for readability)
+                    suggested_font = int(detected_width * config['pixels_per_mm'] * 0.33)
+                    if abs(config['font_size'] - suggested_font) > 20:  # Significant difference
+                        print(f"   💡 Tip: For {detected_width}mm tape, try --font-size {suggested_font}")
+            # else: detected matches config, silently use it
+        else:
+            print(f"   ⚠️  {error}")
+            print(f"   → Using config width: {config['label_width_mm']}mm")
+    elif args.no_auto_detect and not args.width:
+        print(f"   ℹ️  Auto-detection disabled, using config width: {config['label_width_mm']}mm")
 
     # Print final configuration
     print_configuration(args, config, overrides)
