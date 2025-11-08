@@ -21,7 +21,7 @@ except ImportError:
     print("  pip install pycups", file=sys.stderr)
     sys.exit(1)
 
-from labelprinter.print_text import get_config
+from labelprinter.print_text import load_config
 
 
 class QueueManager:
@@ -251,7 +251,7 @@ Examples:
         sys.exit(1)
 
     # Get queue name from config
-    config = get_config()
+    config = load_config()
 
     if args.queue_name:
         queue_name = args.queue_name

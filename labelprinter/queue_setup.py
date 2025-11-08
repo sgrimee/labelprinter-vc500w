@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 # Import configuration utilities
-from labelprinter.print_text import get_config, CONFIG_FILE
+from labelprinter.print_text import load_config, CONFIG_FILE
 
 
 QUEUE_NAME = "BrotherVC500W"
@@ -80,7 +80,7 @@ def create_cups_queue(queue_name, description, location):
 
 def update_config_for_cups(queue_name):
     """Update labelprinter config to enable CUPS mode"""
-    config = get_config()
+    config = load_config()
 
     if 'cups' not in config:
         config['cups'] = {}
@@ -114,7 +114,7 @@ def remove_cups_queue(queue_name):
 
 def disable_cups_in_config():
     """Disable CUPS mode in config"""
-    config = get_config()
+    config = load_config()
 
     if 'cups' in config:
         config['cups']['enabled'] = False
@@ -159,7 +159,7 @@ def main():
     # Check mode
     if args.check:
         exists = check_queue_exists(args.queue_name)
-        config = get_config()
+        config = load_config()
         cups_enabled = config.get('cups', {}).get('enabled', False)
 
         print(f"CUPS queue '{args.queue_name}': {'EXISTS' if exists else 'NOT FOUND'}")

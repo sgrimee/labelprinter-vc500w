@@ -25,7 +25,7 @@ except ImportError:
     print("  pip install pycups", file=sys.stderr)
     sys.exit(1)
 
-from labelprinter.print_text import get_config
+from labelprinter.print_text import load_config
 from labelprinter.connection import Connection
 from labelprinter.printer import LabelPrinter
 
@@ -38,7 +38,7 @@ class QueueWorker:
         self.dry_run = dry_run
         self.verbose = verbose
         self.conn = cups.Connection()
-        self.config = get_config()
+        self.config = load_config()
 
     def log(self, message, force=False):
         """Print log message if verbose or forced"""
@@ -275,7 +275,7 @@ def main():
     args = parser.parse_args()
 
     # Get config
-    config = get_config()
+    config = load_config()
 
     # Determine queue name
     if args.queue_name:
