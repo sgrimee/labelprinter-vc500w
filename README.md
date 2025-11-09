@@ -1,6 +1,6 @@
 # Brother VC-500W Label Printer Control
 
-Python CLI tools for controlling the [Brother VC-500W](https://www.brother.com/labellers/vc500w.html) label printer from Linux, macOS, and other Unix-like systems.
+Python CLI tools for controlling the [Brother VC-500W](https://www.brother-usa.com/products/vc500w) label printer from Linux, macOS, and other Unix-like systems.
 
 **Features:**
 - 🖨️ Print text labels with automatic image generation
@@ -32,7 +32,7 @@ Fast, isolated installation using [uv](https://github.com/astral-sh/uv):
 uv tool install /path/to/labelprinter-vc500w
 
 # Or install from git
-uv tool install git+https://github.com/yourusername/labelprinter-vc500w
+uv tool install git+https://github.com/sgrimee/labelprinter-vc500w
 
 # Commands now available system-wide:
 label-text "Hello World"
@@ -48,14 +48,14 @@ uv tool install --force /path/to/labelprinter-vc500w
 
 #### Install to user profile:
 ```bash
-nix profile install github:yourusername/labelprinter-vc500w
+nix profile install github:sgrimee/labelprinter-vc500w
 # Or from local directory:
 nix profile install .
 ```
 
 #### Run without installing:
 ```bash
-nix run github:yourusername/labelprinter-vc500w -- "Hello World"
+nix run github:sgrimee/labelprinter-vc500w -- "Hello World"
 ```
 
 #### Add to NixOS configuration:
@@ -63,7 +63,7 @@ nix run github:yourusername/labelprinter-vc500w -- "Hello World"
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    labelprinter.url = "github:yourusername/labelprinter-vc500w";
+    labelprinter.url = "github:sgrimee/labelprinter-vc500w";
   };
 
   outputs = { nixpkgs, labelprinter, ... }: {
@@ -111,7 +111,7 @@ nix run github:yourusername/labelprinter-vc500w -- "Hello World"
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     darwin.url = "github:lnl7/nix-darwin";
-    labelprinter.url = "github:yourusername/labelprinter-vc500w";
+    labelprinter.url = "github:sgrimee/labelprinter-vc500w";
   };
 
   outputs = { nixpkgs, darwin, labelprinter, ... }: {
@@ -794,7 +794,6 @@ Contributions welcome! Please:
 
 ## Related Projects
 
-- [brother-label-printer](https://github.com/fiveangle/brother-label-printer) - Alternative implementation
 - [brother_ql](https://github.com/pklaus/brother_ql) - For QL-series label printers
 
 ---
