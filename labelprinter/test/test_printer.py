@@ -52,9 +52,12 @@ class MockConnection(object):
             file_response,
         )
 
+        # Get the directory of the test file
+        test_dir = Path(__file__).parent
+
         return self.register_response(
-            Path(file_message).read_text().rstrip(),
-            Path(file_response).read_text().rstrip(),
+            (test_dir / file_message).read_text().rstrip(),
+            (test_dir / file_response).read_text().rstrip(),
             answer_description,
         )
 
@@ -65,9 +68,12 @@ class MockConnection(object):
             file_response,
         )
 
+        # Get the directory of the test file
+        test_dir = Path(__file__).parent
+
         return self.register_response(
-            Path(file_message).read_bytes(),
-            Path(file_response).read_text().rstrip(),
+            (test_dir / file_message).read_bytes(),
+            (test_dir / file_response).read_text().rstrip(),
             answer_description,
         )
 
@@ -95,13 +101,13 @@ class MockConnection(object):
         if self._last_message in self._responses:
             answer_description, data = self._responses[self._last_message]
 
-            logger.info("Returning %s: %s", answer_description, data.encode())
+            logger.info("Returning %s: %s", answer_description, data)
 
             return data
         else:
             error = (
                 "No response has been configured in the mock for message %s"
-                % self._last_message.encode()
+                % self._last_message
             )
 
             logger.error(error)
@@ -309,7 +315,10 @@ class TestPrinter(unittest.TestCase):
             image, image_response, image_description
         )
 
-        with open(image, "rb") as image_handle:
+        # Get the directory of the test file
+        test_dir = Path(__file__).parent
+
+        with open(test_dir / image, "rb") as image_handle:
             result = printer.print_jpeg(image_handle, mode, cut)
 
         logger.info("Got result: %s", result)
