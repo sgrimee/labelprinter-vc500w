@@ -15,7 +15,8 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import unittest, logging
+import unittest
+import logging
 from pathlib import Path
 
 from labelprinter.printer import *
@@ -93,13 +94,13 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEqual(Config, type(result));
-        self.assertEqual("Wedge", result.model);
-        self.assertEqual("XXXXXXXXXXXXXXX", result.serial);
-        self.assertEqual("00:00:00:00:00:00", result.wlan_mac);
-        self.assertEqual(tape_type, result.tape_type);
-        self.assertEqual(tape_length_initial, result.tape_length_initial);
-        self.assertEqual(tape_width, result.tape_width);
+        self.assertEqual(Config, type(result))
+        self.assertEqual("Wedge", result.model)
+        self.assertEqual("XXXXXXXXXXXXXXX", result.serial)
+        self.assertEqual("00:00:00:00:00:00", result.wlan_mac)
+        self.assertEqual(tape_type, result.tape_type)
+        self.assertEqual(tape_length_initial, result.tape_length_initial)
+        self.assertEqual(tape_width, result.tape_width)
 
         return result
 
@@ -120,7 +121,7 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEqual(Status, type(result));
+        self.assertEqual(Status, type(result))
         self.assertEqual(print_state, result.print_state)
         self.assertEqual(print_job_stage, result.print_job_stage)
         self.assertEqual(print_job_error, result.print_job_error)
@@ -148,7 +149,7 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEqual(LockAnswer, type(result));
+        self.assertEqual(LockAnswer, type(result))
         self.assertEqual(job_number, result.job_number)
         self.assertEqual(code, result.code)
 
@@ -164,7 +165,7 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEqual(ReleaseAnswer, type(result));
+        self.assertEqual(ReleaseAnswer, type(result))
 
     def test_lock_release(self):
         """Tests releasing the printer lock after printing"""
@@ -180,7 +181,7 @@ class TestPrinter(unittest.TestCase):
 
         logger.info("Got result: %s", result)
         
-        self.assertEqual(PrintAnswer, type(result));
+        self.assertEqual(PrintAnswer, type(result))
 
     def test_print_image(self):
         """Tests printing a test image"""

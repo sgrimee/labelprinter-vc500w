@@ -10,7 +10,6 @@ import argparse
 import json
 import subprocess
 import sys
-from pathlib import Path
 
 # Import configuration utilities
 from labelprinter.print_text import load_config, CONFIG_FILE
@@ -175,7 +174,7 @@ def main():
             if remove_cups_queue(args.queue_name):
                 print(f"✓ CUPS queue '{args.queue_name}' removed")
             else:
-                print(f"✗ Failed to remove CUPS queue", file=sys.stderr)
+                print("✗ Failed to remove CUPS queue", file=sys.stderr)
                 sys.exit(1)
         else:
             print(f"  Queue '{args.queue_name}' does not exist")
@@ -186,7 +185,7 @@ def main():
         sys.exit(0)
 
     # Setup mode
-    print(f"Setting up CUPS queue for Brother VC-500W...")
+    print("Setting up CUPS queue for Brother VC-500W...")
     print(f"Queue name: {args.queue_name}")
 
     # Check if queue already exists
@@ -207,7 +206,7 @@ def main():
         print("Failed to create CUPS queue", file=sys.stderr)
         sys.exit(1)
 
-    print(f"✓ CUPS queue created")
+    print("✓ CUPS queue created")
 
     # Update config
     print("\nUpdating configuration...")
@@ -227,11 +226,11 @@ def main():
     print("2. Jobs will be queued but not printed automatically")
     print("3. Process queued jobs using: label-queue-worker")
     print("4. Manage jobs using:")
-    print(f"   - label-queue list       # View pending jobs")
-    print(f"   - label-queue cancel <id> # Cancel a job")
-    print(f"   - label-queue retry      # Retry failed jobs")
+    print("   - label-queue list       # View pending jobs")
+    print("   - label-queue cancel <id> # Cancel a job")
+    print("   - label-queue retry      # Retry failed jobs")
     print("\nTo disable CUPS mode:")
-    print(f"  label-queue-setup --remove")
+    print("  label-queue-setup --remove")
 
 
 if __name__ == "__main__":

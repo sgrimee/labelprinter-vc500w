@@ -19,7 +19,7 @@ cups = [
 
 [project.scripts]
 label-text = "labelprinter.print_text:main"
-label-raw = "labelprinter.__main__:main"
+label-direct = "labelprinter.__main__:main"
 label-queue = "labelprinter.queue_manager:main"
 label-queue-worker = "labelprinter.queue_worker:main"
 label-queue-setup = "labelprinter.queue_setup:main"

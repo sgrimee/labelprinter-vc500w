@@ -7,7 +7,6 @@ Creates JPEG images from text and prints them
 import argparse
 import json
 import subprocess
-import tempfile
 import os
 import sys
 import time
@@ -133,7 +132,6 @@ def calculate_minimal_image_dimensions(text, config):
     # Measure text dimensions
     bbox = None
     try:
-        from PIL import ImageFont
         bbox = font.getbbox(text)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
@@ -220,7 +218,7 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         # Load font
         font = load_font(config.get("font"), font_size)
         if debug:
-            print(f"   PIL: Font loaded successfully")
+            print("   PIL: Font loaded successfully")
 
         # Create image with minimal dimensions
         img = Image.new('RGB', (width, height), color='white')
@@ -272,7 +270,7 @@ def try_pil_image_creation(text, config, tmp_path, debug=False):
         # Load font
         font = load_font(config.get("font"), font_size)
         if debug:
-            print(f"   PIL: Font loaded successfully")
+            print("   PIL: Font loaded successfully")
 
         # Create image with minimal dimensions
         img = Image.new('RGB', (width, height), color='white')
@@ -409,7 +407,7 @@ def build_print_command(image_path, config):
     else:
         # Fallback for development mode
         base_cmd = ["python", "-m", "labelprinter"]
-    
+
     return base_cmd + [
         "--host", config["host"],
         "--print-jpeg", image_path,
@@ -456,12 +454,12 @@ def submit_to_cups(image_path, config, debug=False):
         return 0
 
     except subprocess.TimeoutExpired:
-        print(f"❌ Error: CUPS submission timed out", file=sys.stderr)
+        print("❌ Error: CUPS submission timed out", file=sys.stderr)
         return 1
     except subprocess.CalledProcessError as e:
         stderr_msg = e.stderr.strip() if e.stderr else "No error details"
         print(f"❌ Error submitting to CUPS: {stderr_msg}", file=sys.stderr)
-        print(f"\nMake sure CUPS queue is configured. Run: label-queue-setup", file=sys.stderr)
+        print("\nMake sure CUPS queue is configured. Run: label-queue-setup", file=sys.stderr)
         return 1
     except Exception as e:
         print(f"❌ Error: {e}", file=sys.stderr)
@@ -525,7 +523,7 @@ def print_label(image_path, config, debug=False):
                 # Remove the "The above exception..." if present
                 error_text = re.sub(r'\n*The above exception.*$', '', error_text, flags=re.DOTALL)
                 # Show just the ValueError message which already has helpful solutions
-                print(f"\n❌ Connection Error:")
+                print("\n❌ Connection Error:")
                 print(error_text)
                 return 1  # Return error code instead of raising
         
@@ -534,7 +532,7 @@ def print_label(image_path, config, debug=False):
             error_match = re.search(r'TimeoutError: (.+?)(?:\n\n|\Z)', stderr_msg, re.DOTALL)
             if error_match:
                 error_text = error_match.group(1).strip()
-                print(f"\n❌ Printer Timeout:")
+                print("\n❌ Printer Timeout:")
                 print(error_text)
                 if "did not become idle" in error_text:
                     print("\nThe printer is busy with another job or needs attention.")
@@ -566,6 +564,13 @@ def setup_argument_parser():
                        help='Show detailed command output and debugging info')
     parser.add_argument('--no-auto-detect', action='store_true',
                        help='Skip auto-detection of tape width from printer')
+
+    # Printing mode overrides (mutually exclusive)
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument('--direct', action='store_true',
+                           help='Force direct printing mode (ignore CUPS config)')
+    mode_group.add_argument('--queue', action='store_true',
+                           help='Force queue mode via CUPS (ignore config)')
     return parser
 
 def apply_config_overrides(config, args):
@@ -585,11 +590,23 @@ def apply_config_overrides(config, args):
         config["rotate"] = args.rotate
         overrides.append(f"Rotation: {args.rotate} degrees")
 
+    # Handle printing mode overrides
+    if args.direct:
+        if "cups" not in config:
+            config["cups"] = {}
+        config["cups"]["enabled"] = False
+        overrides.append("Mode: Direct (forced)")
+    elif args.queue:
+        if "cups" not in config:
+            config["cups"] = {}
+        config["cups"]["enabled"] = True
+        overrides.append("Mode: Queue (forced)")
+
     return overrides
 
 def print_configuration(args, config, overrides):
     """Print the final configuration"""
-    print(f"\n📋 Final configuration:")
+    print("\n📋 Final configuration:")
     print(f"   Text: '{args.text}'")
     print(f"   Label width: {config['label_width_mm']}mm")
     print(f"   Font: {config['font']} (size {config['font_size']})")
@@ -608,7 +625,7 @@ def handle_dry_run(image_path, config, args):
     print(f"   📁 Image saved at: {image_path}")
     print("   📋 Preview options:")
     print(f"   • File manager: {image_path}")
-    print(f"   • Manual print: python -m labelprinter --host {config['host']} --print-jpeg {image_path}")
+    print(f"   • Manual print: label-raw --host {config['host']} --print-jpeg {image_path}")
 
     if args.preview:
         preview_image(image_path)

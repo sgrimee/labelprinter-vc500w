@@ -7,7 +7,6 @@ Provides commands to list, cancel, and retry print jobs.
 
 import argparse
 import sys
-from datetime import datetime
 
 # Try to import pycups, show helpful error if not installed
 try:

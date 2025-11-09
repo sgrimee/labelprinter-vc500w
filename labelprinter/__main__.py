@@ -50,6 +50,13 @@ def main():
     status_group = parser.add_argument_group('status options')
     status_group.add_argument('-j', '--json', action='store_true', help='return the status information in JSON format');
 
+    # Printing mode overrides (mutually exclusive)
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument('--direct', action='store_true',
+                           help='Force direct printing mode (ignore CUPS config)')
+    mode_group.add_argument('--queue', action='store_true',
+                           help='Force queue mode via CUPS (ignore config)')
+
     process_arguments(parser.parse_args());
 
 def _get_configuration_and_display_connection(printer):
@@ -162,9 +169,86 @@ def release_lock(printer, job_id):
     print('Releasing lock for job %s...' % job_id);
     printer.release(job_id);
 
+def should_use_cups_mode(args):
+    """Determine if CUPS queue mode should be used based on config and flags"""
+    # Priority: CLI flags > config setting
+
+    # Explicit --direct flag always uses direct mode
+    if args.direct:
+        return False
+
+    # Explicit --queue flag always uses queue mode
+    if args.queue:
+        return True
+
+    # Otherwise, check config file
+    try:
+        from pathlib import Path
+        config_file = Path.home() / ".config" / "labelprinter" / "config.json"
+        if config_file.exists():
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+                return config.get('cups', {}).get('enabled', False)
+    except:
+        pass
+
+    # Default to direct mode
+    return False
+
+def submit_to_cups_queue(image_path, args):
+    """Submit print job to CUPS queue"""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    # Load config to get queue name
+    try:
+        config_file = Path.home() / ".config" / "labelprinter" / "config.json"
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+            queue_name = config.get('cups', {}).get('queue_name', 'BrotherVC500W')
+    except:
+        queue_name = 'BrotherVC500W'
+
+    print(f'Submitting job to CUPS queue "{queue_name}"...')
+
+    try:
+        cmd = [
+            "lp",
+            "-d", queue_name,
+            "-o", "fit-to-page",
+            "-t", f"Label: {Path(image_path).stem}",
+            str(image_path)
+        ]
+
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=10)
+
+        if result.stdout:
+            print(f'✓ {result.stdout.strip()}')
+            print(f'   Image: {image_path}')
+            print('\nJob queued successfully!')
+            print('To process queued jobs, run: label-queue-worker')
+
+        return 0
+    except subprocess.CalledProcessError as e:
+        print(f'❌ Error submitting to CUPS: {e.stderr.strip() if e.stderr else "Unknown error"}', file=sys.stderr)
+        print(f'\nMake sure CUPS queue is configured. Run: label-queue-setup', file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f'❌ Error: {e}', file=sys.stderr)
+        return 1
+
 def process_arguments(args):
     connection = None;
     try:
+        # For print jobs, check if we should use CUPS mode
+        if args.print_jpeg != None and should_use_cups_mode(args):
+            # Save JPEG to a temporary file if needed, then submit to CUPS
+            import sys
+            result = submit_to_cups_queue(args.print_jpeg.name, args)
+            sys.exit(result)
+
+        # Otherwise use direct printing mode
         printer = LabelPrinter(Connection(args.host, args.port))
 
         if args.get_status:

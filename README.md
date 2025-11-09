@@ -197,6 +197,138 @@ label-text "Vertical" --rotate 90
 
 ---
 
+## Configuration File
+
+Configuration is stored in: `~/.config/labelprinter/config.json`
+
+The file is created automatically on first run. You can edit it manually or use `just setup-printer` for auto-configuration.
+
+### Complete Configuration Example
+
+```json
+{
+  "host": "VC-500W4188.local",
+  "label_width_mm": 25,
+  "font_size": 104,
+  "font": "/path/to/font.ttf",
+  "padding": 50,
+  "rotate": 0,
+  "pixels_per_mm": 12.48,
+  "text_padding_pixels": 0,
+  "print_timeout": 120,
+  "avahi_timeout": 10,
+  "cups": {
+    "enabled": false,
+    "queue_name": "BrotherVC500W",
+    "auto_process": false
+  }
+}
+```
+
+### Configuration Parameters
+
+**Printer Settings:**
+- `host` - Printer hostname or IP address (e.g., "VC-500W4188.local" or "192.168.1.100")
+- `label_width_mm` - Tape width in millimeters (12, 19, 25, 29, 38, 50)
+
+**Font Settings:**
+- `font_size` - Font size in points (80-150 typical; use ~104 for 25mm tape)
+- `font` - Path to TrueType font file (or system font name)
+- `rotate` - Text rotation: 0 (horizontal), 90, 180, or 270 degrees
+
+**Image Generation:**
+- `pixels_per_mm` - Printer resolution (12.48 for VC-500W, ~317 DPI - don't change)
+- `padding` - Image padding in pixels (deprecated, use text_padding_pixels)
+- `text_padding_pixels` - Extra padding around text (0 for minimal waste)
+
+**Timeouts:**
+- `print_timeout` - Maximum seconds to wait for printing (default: 120)
+- `avahi_timeout` - Seconds to wait for mDNS resolution (default: 10)
+
+**CUPS Queue Mode (Optional):**
+- `cups.enabled` - Set to `true` to enable queue mode, `false` for direct printing (default: false)
+- `cups.queue_name` - Name of CUPS printer queue (default: "BrotherVC500W")
+- `cups.auto_process` - Reserved for future use (default: false)
+
+### Recommended Font Sizes by Tape Width
+
+| Tape Width | Recommended Font Size | Notes |
+|------------|----------------------|-------|
+| 12mm | 40-60 | Small labels |
+| 19mm | 70-90 | Medium labels |
+| 25mm | 90-120 | Standard labels (104 works well) |
+| 29mm | 100-130 | Large labels |
+| 38mm | 120-160 | Extra large |
+| 50mm | 150-200 | Maximum size |
+
+**Tip:** Run `label-text` without `--no-auto-detect` to let it automatically detect tape width and suggest optimal font size.
+
+---
+
+## Printing Modes
+
+Both `label-text` and `label-raw` support two printing modes:
+
+### 1. Direct Mode (Default)
+
+**How it works**: Sends print jobs directly to the printer via TCP/IP socket connection
+**Speed**: Immediate (blocks until printer is ready and completes printing)
+**Best for**: Single labels, quick testing, simple scripts
+**Example**: `label-raw --host VC-500W.local --print-jpeg image.jpg`
+
+**Characteristics:**
+- Synchronous operation - waits for print completion
+- No dependencies beyond Python and Pillow
+- Simple, straightforward printing
+- Immediate feedback on success or failure
+
+### 2. Queue Mode (Optional - Requires CUPS)
+
+**How it works**: Jobs are submitted to a CUPS queue and processed by a background daemon
+**Speed**: Fire-and-forget (returns immediately, prints later)
+**Best for**: Multiple labels, batch printing, busy printers
+**Setup**: Run `label-queue-setup` to configure
+**Example**: `label-raw --host VC-500W.local --print-jpeg image.jpg --queue`
+
+**Characteristics:**
+- Asynchronous operation - submit and continue working
+- Automatic retry when printer is busy
+- Job persistence across system reboots
+- Requires CUPS and pycups library
+
+### Mode Selection
+
+**Both commands are config-aware** and automatically use the mode specified in `~/.config/labelprinter/config.json`:
+
+```json
+{
+  "cups": {
+    "enabled": false  // false = direct mode (default), true = queue mode
+  }
+}
+```
+
+**Override with flags:**
+- `--direct` - Force direct mode for this print (ignore config)
+- `--queue` - Force queue mode for this print (ignore config)
+
+**Examples:**
+```bash
+# Use mode from config (default behavior)
+label-text "Hello World"
+label-raw --host VC-500W.local --print-jpeg image.jpg
+
+# Force direct mode (even if CUPS is enabled in config)
+label-text "Urgent Label" --direct
+label-raw --host VC-500W.local --print-jpeg image.jpg --direct
+
+# Force queue mode (even if CUPS is disabled in config)
+label-text "Batch Job" --queue
+label-raw --host VC-500W.local --print-jpeg image.jpg --queue
+```
+
+---
+
 ## Usage
 
 ### Text Printing (`label-text`)
@@ -216,6 +348,8 @@ label-text "Your Text Here" [options]
 - `--preview` - Show preview in terminal (requires chafa/catimg/tiv)
 - `--debug` - Show detailed debug output
 - `--no-auto-detect` - Skip auto-detection of tape width from printer
+- `--direct` - Force direct printing mode (ignore CUPS config)
+- `--queue` - Force queue mode via CUPS (ignore config)
 
 **Auto-Detection:**
 By default, `label-text` automatically queries the printer to detect the installed tape width. If the detected width differs from your config file, it will:
@@ -245,7 +379,7 @@ label-text "Custom" --host 192.168.1.100 --font-size 80
 
 ### Raw Image Printing (`label-raw`)
 
-Send JPEG images directly to the printer:
+Send JPEG images to the printer (respects CUPS config, or use `--direct`/`--queue` to override):
 
 ```bash
 label-raw --host HOST --print-jpeg IMAGE.jpg [options]
@@ -260,11 +394,19 @@ label-raw --host HOST --print-jpeg IMAGE.jpg [options]
 - `--get-status` - Check printer status
 - `--release JOB_ID` - Release stuck print job
 - `-j, --json` - Output status in JSON format
+- `--direct` - Force direct printing mode (ignore CUPS config)
+- `--queue` - Force queue mode via CUPS (ignore config)
 
 **Examples:**
 ```bash
-# Print an image
+# Print an image (uses config mode or default direct)
 label-raw --host VC-500W.local --print-jpeg label.jpg
+
+# Force direct mode (bypass CUPS even if enabled)
+label-raw --host VC-500W.local --print-jpeg label.jpg --direct
+
+# Force queue mode
+label-raw --host VC-500W.local --print-jpeg label.jpg --queue
 
 # Check printer status
 label-raw --host VC-500W.local --get-status
@@ -605,10 +747,13 @@ label-raw --host VC-500W.local --get-status
 ```
 labelprinter/
 ├── __init__.py
-├── __main__.py          # label-raw: Low-level printer control
+├── __main__.py          # label-raw: Raw printer control (config-aware)
 ├── connection.py        # TCP/IP connection handling
 ├── printer.py           # Printer protocol implementation
-├── print_text.py        # label-text: Text-to-label main CLI
+├── print_text.py        # label-text: Text-to-label main CLI (config-aware)
+├── queue_worker.py      # label-queue-worker: CUPS job processor
+├── queue_manager.py     # label-queue: CUPS job management
+├── queue_setup.py       # label-queue-setup: CUPS configuration
 └── test/
     └── test_printer.py  # Unit tests
 
@@ -617,8 +762,16 @@ Generated images: ./images/ (when using label-text)
 ```
 
 **Commands:**
-- `label-text`: High-level tool - converts text to JPEG and prints
-- `label-raw`: Low-level tool - sends JPEG images to printer
+
+**Main Commands (Config-Aware):**
+- `label-text` - High-level: converts text to JPEG and prints (respects CUPS config)
+- `label-raw` - Low-level: sends JPEG images to printer (respects CUPS config)
+  - Both support `--direct` and `--queue` flags to override config
+
+**Queue Management (CUPS):**
+- `label-queue-worker` - Background daemon: processes queued jobs using `label-raw`
+- `label-queue` - Queue management: list, cancel, status
+- `label-queue-setup` - One-time setup: configure CUPS queue
 
 ---
 

@@ -7,7 +7,6 @@ It handles printer busy states with retries and provides clear status updates.
 """
 
 import argparse
-import os
 import subprocess
 import sys
 import time
@@ -26,8 +25,6 @@ except ImportError:
     sys.exit(1)
 
 from labelprinter.print_text import load_config
-from labelprinter.connection import Connection
-from labelprinter.printer import LabelPrinter
 
 
 class QueueWorker:
@@ -68,7 +65,7 @@ class QueueWorker:
                 # CUPS job state: 3 = pending (stopped printer), 4 = pending, 5 = held, 6 = processing
                 if job_info.get('job-state') in [3, 4, 5]:  # pending or held
                     held_jobs.append((job_id, job_info))
-                    self.log(f"    -> Added to processing list")
+                    self.log("    -> Added to processing list")
 
             self.log(f"Total jobs to process: {len(held_jobs)}")
             return sorted(held_jobs, key=lambda x: x[0])  # Sort by job ID
@@ -104,7 +101,7 @@ class QueueWorker:
 
                 self.log(f"Image file not found: {doc_name} (tried both absolute and images/)")
             else:
-                self.log(f"No document name in job info")
+                self.log("No document name in job info")
 
             return None
 
@@ -286,14 +283,14 @@ class QueueWorker:
 
         # Summary (only shown when exiting, not in watch mode)
         self.log(f"\n{'='*60}", force=True)
-        self.log(f"Queue processing complete", force=True)
+        self.log("Queue processing complete", force=True)
         self.log(f"  Processed: {processed}", force=True)
         self.log(f"  Failed: {failed}", force=True)
         if busy_jobs:
             self.log(f"  Waiting (busy): {len(busy_jobs)}", force=True)
         if failed_jobs:
             self.log(f"  Remaining in queue (failed): {len(failed_jobs)}", force=True)
-            self.log(f"  To cancel failed jobs: label-queue cancel <job-id>", force=True)
+            self.log("  To cancel failed jobs: label-queue cancel <job-id>", force=True)
         self.log(f"{'='*60}", force=True)
 
         return processed, failed, len(busy_jobs)
