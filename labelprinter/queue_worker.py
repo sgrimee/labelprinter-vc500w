@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Try to import pycups, show helpful error if not installed
 try:
-    import cups
+    import cups  # type: ignore[import-not-found]
 except ImportError:
     print("ERROR: pycups is not installed", file=sys.stderr)
     print("\nCUPS queue mode requires the pycups library.", file=sys.stderr)
@@ -46,11 +46,17 @@ class QueueWorker:
         """Get all held/pending jobs from the queue"""
         try:
             jobs = self.conn.getJobs(
-                which_jobs='not-completed',
+                which_jobs="not-completed",
                 my_jobs=False,
-                requested_attributes=['job-id', 'job-name', 'job-state',
-                                     'job-state-reasons', 'job-originating-user-name',
-                                     'job-printer-uri', 'document-name-supplied']
+                requested_attributes=[
+                    "job-id",
+                    "job-name",
+                    "job-state",
+                    "job-state-reasons",
+                    "job-originating-user-name",
+                    "job-printer-uri",
+                    "document-name-supplied",
+                ],
             )
 
             self.log(f"Found {len(jobs)} total not-completed jobs")
@@ -58,12 +64,12 @@ class QueueWorker:
             # Filter to our queue and held jobs
             held_jobs = []
             for job_id, job_info in jobs.items():
-                state = job_info.get('job-state')
-                doc_name = job_info.get('document-name-supplied', '')
+                state = job_info.get("job-state")
+                doc_name = job_info.get("document-name-supplied", "")
                 self.log(f"  Job {job_id}: state={state}, document={doc_name}")
 
                 # CUPS job state: 3 = pending (stopped printer), 4 = pending, 5 = held, 6 = processing
-                if job_info.get('job-state') in [3, 4, 5]:  # pending or held
+                if job_info.get("job-state") in [3, 4, 5]:  # pending or held
                     held_jobs.append((job_id, job_info))
                     self.log("    -> Added to processing list")
 
@@ -84,7 +90,7 @@ class QueueWorker:
         """
         try:
             # document-name-supplied contains just the filename
-            doc_name = job_info.get('document-name-supplied', '')
+            doc_name = job_info.get("document-name-supplied", "")
 
             if doc_name:
                 # Try as absolute path first
@@ -94,12 +100,14 @@ class QueueWorker:
                     return image_file
 
                 # Otherwise look in images/ directory
-                image_file = Path('images') / doc_name
+                image_file = Path("images") / doc_name
                 if image_file.exists():
                     self.log(f"Found image file: {image_file}")
                     return image_file
 
-                self.log(f"Image file not found: {doc_name} (tried both absolute and images/)")
+                self.log(
+                    f"Image file not found: {doc_name} (tried both absolute and images/)"
+                )
             else:
                 self.log("No document name in job info")
 
@@ -116,11 +124,11 @@ class QueueWorker:
         Returns:
             (success, error_message, should_retry)
         """
-        job_name = job_info.get('job-name', f'Job {job_id}')
+        job_name = job_info.get("job-name", f"Job {job_id}")
 
-        self.log(f"\n{'='*60}", force=True)
+        self.log(f"\n{'=' * 60}", force=True)
         self.log(f"Processing job {job_id}: {job_name}", force=True)
-        self.log(f"{'='*60}", force=True)
+        self.log(f"{'=' * 60}", force=True)
 
         # Get the job file
         job_file = self.get_job_file(job_id, job_info)
@@ -138,8 +146,10 @@ class QueueWorker:
         # Build label-raw command
         cmd = [
             "label-raw",
-            "--host", self.config['host'],
-            "--print-jpeg", str(job_file)
+            "--host",
+            self.config["host"],
+            "--print-jpeg",
+            str(job_file),
         ]
 
         # Note: label-raw doesn't have --debug flag
@@ -153,7 +163,7 @@ class QueueWorker:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=120  # Same timeout as direct printing
+                timeout=120,  # Same timeout as direct printing
             )
 
             if result.returncode == 0:
@@ -163,8 +173,13 @@ class QueueWorker:
                 error_output = result.stderr.strip() or result.stdout.strip()
 
                 # Check if error is due to printer being busy
-                if "BUSY" in error_output.upper() or "did not become idle" in error_output:
-                    self.log(f"⏸  Printer is busy, job {job_id} will be retried", force=True)
+                if (
+                    "BUSY" in error_output.upper()
+                    or "did not become idle" in error_output
+                ):
+                    self.log(
+                        f"⏸  Printer is busy, job {job_id} will be retried", force=True
+                    )
                     return (False, "Printer busy", True)  # Retry later
 
                 # Other error
@@ -187,7 +202,9 @@ class QueueWorker:
             self.conn.cancelJob(job_id, purge_job=False)
             return True
         except cups.IPPError as e:
-            self.log(f"Warning: Could not mark job {job_id} as completed: {e}", force=True)
+            self.log(
+                f"Warning: Could not mark job {job_id} as completed: {e}", force=True
+            )
             return False
 
     def mark_job_failed(self, job_id, error_message):
@@ -199,7 +216,10 @@ class QueueWorker:
         """
         try:
             self.log(f"✗ Job {job_id} FAILED: {error_message}", force=True)
-            self.log(f"  Job {job_id} remains in queue. To cancel: label-queue cancel {job_id}", force=True)
+            self.log(
+                f"  Job {job_id} remains in queue. To cancel: label-queue cancel {job_id}",
+                force=True,
+            )
             # Don't cancel - leave in queue for manual intervention
             return True
         except Exception as e:
@@ -224,10 +244,16 @@ class QueueWorker:
         failed_jobs = []  # Track jobs that failed in this run (don't retry)
 
         if not once:
-            self.log("👀 Worker running in daemon mode - will keep running until stopped (Ctrl+C)", force=True)
+            self.log(
+                "👀 Worker running in daemon mode - will keep running until stopped (Ctrl+C)",
+                force=True,
+            )
             self.log(f"   Polling every {poll_interval}s for new jobs", force=True)
         else:
-            self.log("Running in one-shot mode - will exit when current batch is done", force=True)
+            self.log(
+                "Running in one-shot mode - will exit when current batch is done",
+                force=True,
+            )
 
         while True:
             jobs = self.get_held_jobs()
@@ -238,7 +264,10 @@ class QueueWorker:
             if not new_jobs:
                 if busy_jobs:
                     # Have busy jobs to retry
-                    self.log(f"\nWaiting {retry_delay}s before retrying {len(busy_jobs)} busy job(s)...", force=True)
+                    self.log(
+                        f"\nWaiting {retry_delay}s before retrying {len(busy_jobs)} busy job(s)...",
+                        force=True,
+                    )
                     time.sleep(retry_delay)
                     continue
                 elif once:
@@ -248,9 +277,15 @@ class QueueWorker:
                     # Daemon mode: wait for new jobs
                     # (all current jobs have already failed or queue is empty)
                     if failed_jobs:
-                        self.log(f"All {len(failed_jobs)} job(s) failed. Waiting {poll_interval}s for new jobs...", force=False)
+                        self.log(
+                            f"All {len(failed_jobs)} job(s) failed. Waiting {poll_interval}s for new jobs...",
+                            force=False,
+                        )
                     else:
-                        self.log(f"Queue empty, waiting {poll_interval}s for new jobs...", force=False)
+                        self.log(
+                            f"Queue empty, waiting {poll_interval}s for new jobs...",
+                            force=False,
+                        )
                     time.sleep(poll_interval)
                     continue
 
@@ -270,7 +305,9 @@ class QueueWorker:
                     processed += 1
                 elif should_retry:
                     busy_jobs.append(job_id)
-                    self.log(f"  Job {job_id} will be retried (printer busy)", force=True)
+                    self.log(
+                        f"  Job {job_id} will be retried (printer busy)", force=True
+                    )
                 else:
                     self.mark_job_failed(job_id, error)
                     failed_jobs.append(job_id)  # Don't retry this job in this run
@@ -282,7 +319,7 @@ class QueueWorker:
                 break
 
         # Summary (only shown when exiting, not in watch mode)
-        self.log(f"\n{'='*60}", force=True)
+        self.log(f"\n{'=' * 60}", force=True)
         self.log("Queue processing complete", force=True)
         self.log(f"  Processed: {processed}", force=True)
         self.log(f"  Failed: {failed}", force=True)
@@ -291,7 +328,7 @@ class QueueWorker:
         if failed_jobs:
             self.log(f"  Remaining in queue (failed): {len(failed_jobs)}", force=True)
             self.log("  To cancel failed jobs: label-queue cancel <job-id>", force=True)
-        self.log(f"{'='*60}", force=True)
+        self.log(f"{'=' * 60}", force=True)
 
         return processed, failed, len(busy_jobs)
 
@@ -301,35 +338,32 @@ def main():
         description="Process print jobs from CUPS queue for Brother VC-500W"
     )
     parser.add_argument(
-        '--queue-name',
-        help='Name of CUPS queue (defaults to config value)'
+        "--queue-name", help="Name of CUPS queue (defaults to config value)"
     )
     parser.add_argument(
-        '--once',
-        action='store_true',
-        help='Exit after processing current batch (for cron jobs). Default is to keep running as daemon.'
+        "--once",
+        action="store_true",
+        help="Exit after processing current batch (for cron jobs). Default is to keep running as daemon.",
     )
     parser.add_argument(
-        '--retry-delay',
+        "--retry-delay",
         type=int,
         default=30,
-        help='Seconds to wait before retrying busy jobs (default: 30)'
+        help="Seconds to wait before retrying busy jobs (default: 30)",
     )
     parser.add_argument(
-        '--poll-interval',
+        "--poll-interval",
         type=int,
         default=5,
-        help='Seconds to wait before checking for new jobs in daemon mode (default: 5)'
+        help="Seconds to wait before checking for new jobs in daemon mode (default: 5)",
     )
     parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Show what would be printed without actually printing'
+        "--dry-run",
+        action="store_true",
+        help="Show what would be printed without actually printing",
     )
     parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='Show detailed output'
+        "--verbose", "-v", action="store_true", help="Show detailed output"
     )
 
     args = parser.parse_args()
@@ -340,8 +374,8 @@ def main():
     # Determine queue name
     if args.queue_name:
         queue_name = args.queue_name
-    elif config.get('cups', {}).get('enabled'):
-        queue_name = config['cups'].get('queue_name', 'BrotherVC500W')
+    elif config.get("cups", {}).get("enabled"):
+        queue_name = config["cups"].get("queue_name", "BrotherVC500W")
     else:
         print("ERROR: CUPS mode not enabled", file=sys.stderr)
         print("Run 'label-queue-setup' to configure CUPS queue", file=sys.stderr)
@@ -357,7 +391,7 @@ def main():
         processed, failed, busy = worker.process_queue(
             once=args.once,
             retry_delay=args.retry_delay,
-            poll_interval=args.poll_interval
+            poll_interval=args.poll_interval,
         )
 
         # Exit code indicates if there were failures
@@ -375,6 +409,7 @@ def main():
         print(f"\nERROR: {e}", file=sys.stderr)
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         sys.exit(1)
 

@@ -18,6 +18,7 @@
 
 import socket
 
+
 class Connection:
     def __init__(self, host, port):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -26,11 +27,13 @@ class Connection:
         self._timeout_long = 30
         self._timeout_connect = 3  # Faster timeout for initial connection
         self._socket.settimeout(self._timeout_connect)
-        
+
         # Try to resolve hostname first with clear error message
         # Prefer IPv4 since we're using AF_INET socket
         try:
-            addr_info = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+            addr_info = socket.getaddrinfo(
+                host, port, socket.AF_INET, socket.SOCK_STREAM
+            )
             if not addr_info:
                 raise socket.gaierror(-2, "No address found")
         except socket.gaierror as e:
@@ -48,7 +51,7 @@ class Connection:
             except (socket.gaierror, OSError):
                 # Both IPv4 and IPv6 resolution failed
                 pass
-            
+
             raise ValueError(
                 f"Cannot resolve hostname '{host}' to IPv4 address: {error_msg}\n"
                 f"Possible solutions:\n"
@@ -57,7 +60,7 @@ class Connection:
                 f"  • Update your config file (~/.config/labelprinter/config.json) with the printer's IP address\n"
                 f"  • Check your network connection and DNS/mDNS settings{ipv6_hint}"
             ) from e
-        
+
         # Now attempt to connect
         try:
             self._socket.connect((host, port))
@@ -88,7 +91,7 @@ class Connection:
                 f"  • Check your network connection\n"
                 f"  • Ensure the printer is on the same network"
             ) from e
-        
+
         # Connection successful, restore standard timeout
         self._socket.settimeout(self._timeout_standard)
         self.flush()
@@ -108,12 +111,12 @@ class Connection:
     def send_file(self, handle):
         self._socket.sendfile(handle, 0)
 
-    def get_message(self, long_timeout = False, buffer_size = 4096):
+    def get_message(self, long_timeout=False, buffer_size=4096):
         try:
             if long_timeout:
                 self._socket.settimeout(self._timeout_long)
 
-            found = ''
+            found = ""
 
             found = self._socket.recv(buffer_size).decode()
 

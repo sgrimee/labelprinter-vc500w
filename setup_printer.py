@@ -11,6 +11,7 @@ import sys
 DEFAULT_HOSTNAME = "VC-500W4188.local"
 AVAHI_TIMEOUT = 10
 
+
 def detect_printer():
     """Detect the printer hostname using avahi-resolve"""
     try:
@@ -18,16 +19,18 @@ def detect_printer():
             ["avahi-resolve", "-n", DEFAULT_HOSTNAME, "-4"],
             capture_output=True,
             text=True,
-            timeout=AVAHI_TIMEOUT
+            timeout=AVAHI_TIMEOUT,
         )
         return DEFAULT_HOSTNAME if result.returncode == 0 else None
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
 
+
 def get_config_path():
     """Get the path to the configuration file"""
     config_dir = os.path.expanduser("~/.config/labelprinter")
     return os.path.join(config_dir, "config.json")
+
 
 def load_existing_config(config_file):
     """Load existing configuration or return empty dict"""
@@ -35,11 +38,12 @@ def load_existing_config(config_file):
         return {}
 
     try:
-        with open(config_file, 'r') as f:
+        with open(config_file, "r") as f:
             return json.load(f)
     except json.JSONDecodeError:
         print(f"Warning: Invalid config file {config_file}, creating new one")
         return {}
+
 
 def save_config(hostname):
     """Save the hostname to the config file"""
@@ -47,12 +51,13 @@ def save_config(hostname):
     os.makedirs(os.path.dirname(config_file), exist_ok=True)
 
     config = load_existing_config(config_file)
-    config['host'] = hostname
+    config["host"] = hostname
 
-    with open(config_file, 'w') as f:
+    with open(config_file, "w") as f:
         json.dump(config, f, indent=2)
 
     print(f"✅ Saved printer hostname to config: {hostname}")
+
 
 def main():
     print("🔍 Detecting Brother VC-500W printer...")
@@ -65,8 +70,11 @@ def main():
     else:
         print("❌ Could not find printer")
         print("   Make sure the printer is on and connected to the network")
-        print("   You can also manually set the hostname in ~/.config/labelprinter/config.json")
+        print(
+            "   You can also manually set the hostname in ~/.config/labelprinter/config.json"
+        )
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

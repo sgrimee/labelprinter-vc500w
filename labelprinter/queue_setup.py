@@ -33,9 +33,7 @@ def check_queue_exists(queue_name):
     """Check if a CUPS queue already exists"""
     try:
         result = subprocess.run(
-            ["lpstat", "-p", queue_name],
-            capture_output=True,
-            text=True
+            ["lpstat", "-p", queue_name], capture_output=True, text=True
         )
         return result.returncode == 0
     except FileNotFoundError:
@@ -53,18 +51,25 @@ def create_cups_queue(queue_name, description, location):
         # This allows jobs to queue but prevents automatic processing
         cmd = [
             "lpadmin",
-            "-p", queue_name,
-            "-v", "file:///dev/null",  # Dummy device
-            "-D", description,
-            "-L", location,
-            "-o", "printer-is-shared=false",  # Don't share over network
+            "-p",
+            queue_name,
+            "-v",
+            "file:///dev/null",  # Dummy device
+            "-D",
+            description,
+            "-L",
+            location,
+            "-o",
+            "printer-is-shared=false",  # Don't share over network
         ]
 
         subprocess.run(cmd, check=True, capture_output=True, text=True)
 
         # Accept jobs but keep printer disabled/stopped
         # This way jobs will queue but won't print
-        subprocess.run(["cupsaccept", queue_name], check=True, capture_output=True, text=True)
+        subprocess.run(
+            ["cupsaccept", queue_name], check=True, capture_output=True, text=True
+        )
 
         return True
     except subprocess.CalledProcessError as e:
@@ -76,16 +81,16 @@ def update_config_for_cups(queue_name):
     """Update labelprinter config to enable CUPS mode"""
     config = load_config()
 
-    if 'cups' not in config:
-        config['cups'] = {}
+    if "cups" not in config:
+        config["cups"] = {}
 
-    config['cups']['enabled'] = True
-    config['cups']['queue_name'] = queue_name
-    config['cups']['auto_process'] = False  # Manual processing by worker
+    config["cups"]["enabled"] = True
+    config["cups"]["queue_name"] = queue_name
+    config["cups"]["auto_process"] = False  # Manual processing by worker
 
     # Save updated config
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(CONFIG_FILE, 'w') as f:
+    with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=2)
 
     return True
@@ -95,10 +100,7 @@ def remove_cups_queue(queue_name):
     """Remove the CUPS queue"""
     try:
         subprocess.run(
-            ["lpadmin", "-x", queue_name],
-            check=True,
-            capture_output=True,
-            text=True
+            ["lpadmin", "-x", queue_name], check=True, capture_output=True, text=True
         )
         return True
     except subprocess.CalledProcessError as e:
@@ -110,10 +112,10 @@ def disable_cups_in_config():
     """Disable CUPS mode in config"""
     config = load_config()
 
-    if 'cups' in config:
-        config['cups']['enabled'] = False
+    if "cups" in config:
+        config["cups"]["enabled"] = False
 
-    with open(CONFIG_FILE, 'w') as f:
+    with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=2)
 
     return True
@@ -124,19 +126,17 @@ def main():
         description="Set up CUPS queue for Brother VC-500W label printer"
     )
     parser.add_argument(
-        '--remove',
-        action='store_true',
-        help='Remove the CUPS queue and disable CUPS mode'
+        "--remove",
+        action="store_true",
+        help="Remove the CUPS queue and disable CUPS mode",
     )
     parser.add_argument(
-        '--queue-name',
+        "--queue-name",
         default=QUEUE_NAME,
-        help=f'Name for the CUPS queue (default: {QUEUE_NAME})'
+        help=f"Name for the CUPS queue (default: {QUEUE_NAME})",
     )
     parser.add_argument(
-        '--check',
-        action='store_true',
-        help='Check if CUPS queue is configured'
+        "--check", action="store_true", help="Check if CUPS queue is configured"
     )
 
     args = parser.parse_args()
@@ -154,7 +154,7 @@ def main():
     if args.check:
         exists = check_queue_exists(args.queue_name)
         config = load_config()
-        cups_enabled = config.get('cups', {}).get('enabled', False)
+        cups_enabled = config.get("cups", {}).get("enabled", False)
 
         print(f"CUPS queue '{args.queue_name}': {'EXISTS' if exists else 'NOT FOUND'}")
         print(f"CUPS mode in config: {'ENABLED' if cups_enabled else 'DISABLED'}")
@@ -192,7 +192,7 @@ def main():
     if check_queue_exists(args.queue_name):
         print(f"\n⚠️  Queue '{args.queue_name}' already exists")
         response = input("Remove and recreate? [y/N]: ")
-        if response.lower() != 'y':
+        if response.lower() != "y":
             print("Aborted")
             sys.exit(0)
 
@@ -217,9 +217,9 @@ def main():
     print(f"✓ Configuration updated ({CONFIG_FILE})")
 
     # Success message
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("CUPS queue setup complete!")
-    print("="*60)
+    print("=" * 60)
     print(f"\nQueue name: {args.queue_name}")
     print("\nNext steps:")
     print("1. Submit print jobs using: label-text 'Your text'")

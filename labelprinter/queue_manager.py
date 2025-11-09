@@ -10,7 +10,7 @@ import sys
 
 # Try to import pycups, show helpful error if not installed
 try:
-    import cups
+    import cups  # type: ignore[import-not-found]
 except ImportError:
     print("ERROR: pycups is not installed", file=sys.stderr)
     print("\nCUPS queue mode requires the pycups library.", file=sys.stderr)
@@ -37,14 +37,19 @@ class QueueManager:
     def list_jobs(self, show_all=False):
         """List jobs in the queue"""
         try:
-            which = 'all' if show_all else 'not-completed'
+            which = "all" if show_all else "not-completed"
             jobs = self.conn.getJobs(
                 which_jobs=which,
                 my_jobs=False,
                 requested_attributes=[
-                    'job-id', 'job-name', 'job-state', 'job-state-reasons',
-                    'job-originating-user-name', 'time-at-creation', 'job-printer-uri'
-                ]
+                    "job-id",
+                    "job-name",
+                    "job-state",
+                    "job-state-reasons",
+                    "job-originating-user-name",
+                    "time-at-creation",
+                    "job-printer-uri",
+                ],
             )
 
             if not jobs:
@@ -52,9 +57,7 @@ class QueueManager:
                 return
 
             # Filter to our queue
-            queue_jobs = [
-                (job_id, info) for job_id, info in jobs.items()
-            ]
+            queue_jobs = [(job_id, info) for job_id, info in jobs.items()]
 
             if not queue_jobs:
                 print(f"No jobs for queue '{self.queue_name}'")
@@ -67,34 +70,34 @@ class QueueManager:
 
             # State mappings
             state_names = {
-                3: 'pending',
-                4: 'pending',
-                5: 'held',
-                6: 'processing',
-                7: 'stopped',
-                8: 'canceled',
-                9: 'aborted',
-                10: 'completed'
+                3: "pending",
+                4: "pending",
+                5: "held",
+                6: "processing",
+                7: "stopped",
+                8: "canceled",
+                9: "aborted",
+                10: "completed",
             }
 
             for job_id, info in sorted(queue_jobs, key=lambda x: x[0]):
-                state_code = info.get('job-state', 0)
-                state = state_names.get(state_code, f'unknown({state_code})')
+                state_code = info.get("job-state", 0)
+                state = state_names.get(state_code, f"unknown({state_code})")
 
                 # Get state reasons
-                reasons = info.get('job-state-reasons', [])
+                reasons = info.get("job-state-reasons", [])
                 if reasons and isinstance(reasons, list):
-                    if 'job-held-on-create' in reasons:
-                        state = 'held'
-                    elif 'printer-stopped' in reasons:
-                        state = 'stopped'
+                    if "job-held-on-create" in reasons:
+                        state = "held"
+                    elif "printer-stopped" in reasons:
+                        state = "stopped"
 
-                user = info.get('job-originating-user-name', 'unknown')
-                name = info.get('job-name', f'Job-{job_id}')
+                user = info.get("job-originating-user-name", "unknown")
+                name = info.get("job-name", f"Job-{job_id}")
 
                 # Truncate long names
                 if len(name) > 30:
-                    name = name[:27] + '...'
+                    name = name[:27] + "..."
 
                 print(f"{job_id:<6} {state:<12} {user:<15} {name:<30}")
 
@@ -102,14 +105,15 @@ class QueueManager:
 
             # Show summary by state
             from collections import Counter
+
             state_counts = Counter(
-                state_names.get(info.get('job-state', 0), 'unknown')
+                state_names.get(info.get("job-state", 0), "unknown")
                 for _, info in queue_jobs
             )
             if state_counts:
-                print("\nBy state:", end='')
+                print("\nBy state:", end="")
                 for state, count in state_counts.items():
-                    print(f" {state}={count}", end='')
+                    print(f" {state}={count}", end="")
                 print()
 
         except cups.IPPError as e:
@@ -129,7 +133,7 @@ class QueueManager:
     def cancel_all_jobs(self, purge=False):
         """Cancel all jobs in the queue"""
         try:
-            jobs = self.conn.getJobs(which_jobs='not-completed')
+            jobs = self.conn.getJobs(which_jobs="not-completed")
 
             if not jobs:
                 print("No jobs to cancel")
@@ -157,7 +161,7 @@ class QueueManager:
     def hold_job(self, job_id):
         """Hold a job (prevent it from printing)"""
         try:
-            self.conn.setJobHoldUntil(job_id, 'indefinite')
+            self.conn.setJobHoldUntil(job_id, "indefinite")
             print(f"✓ Job {job_id} held")
         except cups.IPPError as e:
             print(f"ERROR: Cannot hold job {job_id}: {e}", file=sys.stderr)
@@ -188,7 +192,7 @@ class QueueManager:
             print(f"  Location: {printer.get('printer-location', 'N/A')}")
             print(f"  State: {printer.get('printer-state-message', 'N/A')}")
 
-            accepting = printer.get('printer-is-accepting-jobs', False)
+            accepting = printer.get("printer-is-accepting-jobs", False)
             print(f"  Accepting jobs: {'Yes' if accepting else 'No'}")
 
         except cups.IPPError as e:
@@ -208,39 +212,55 @@ Examples:
   label-queue hold 123          # Hold job 123
   label-queue release 123       # Release held job 123
   label-queue status            # Show queue status
-"""
+""",
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
+    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # List command
-    list_parser = subparsers.add_parser('list', aliases=['ls'], help='List jobs in queue')
-    list_parser.add_argument('--all', action='store_true', help='Show all jobs (including completed)')
+    list_parser = subparsers.add_parser(
+        "list", aliases=["ls"], help="List jobs in queue"
+    )
+    list_parser.add_argument(
+        "--all", action="store_true", help="Show all jobs (including completed)"
+    )
 
     # Cancel command
-    cancel_parser = subparsers.add_parser('cancel', aliases=['rm'], help='Cancel job(s)')
-    cancel_parser.add_argument('job_id', nargs='?', type=int, help='Job ID to cancel')
-    cancel_parser.add_argument('--all', action='store_true', help='Cancel all pending jobs')
-    cancel_parser.add_argument('--purge', action='store_true', help='Purge job data from disk')
+    cancel_parser = subparsers.add_parser(
+        "cancel", aliases=["rm"], help="Cancel job(s)"
+    )
+    cancel_parser.add_argument("job_id", nargs="?", type=int, help="Job ID to cancel")
+    cancel_parser.add_argument(
+        "--all", action="store_true", help="Cancel all pending jobs"
+    )
+    cancel_parser.add_argument(
+        "--purge", action="store_true", help="Purge job data from disk"
+    )
 
     # Hold command
-    hold_parser = subparsers.add_parser('hold', help='Hold a job (prevent printing)')
-    hold_parser.add_argument('job_id', type=int, help='Job ID to hold')
+    hold_parser = subparsers.add_parser("hold", help="Hold a job (prevent printing)")
+    hold_parser.add_argument("job_id", type=int, help="Job ID to hold")
 
     # Release command
-    release_parser = subparsers.add_parser('release', help='Release a held job')
-    release_parser.add_argument('job_id', type=int, help='Job ID to release')
+    release_parser = subparsers.add_parser("release", help="Release a held job")
+    release_parser.add_argument("job_id", type=int, help="Job ID to release")
 
     # Status command
-    subparsers.add_parser('status', help='Show queue status')
+    subparsers.add_parser("status", help="Show queue status")
 
     # Process command (convenience wrapper for label-queue-worker)
-    process_parser = subparsers.add_parser('process', help='Process pending jobs')
-    process_parser.add_argument('--continuous', action='store_true', help='Keep processing until queue empty')
-    process_parser.add_argument('--dry-run', action='store_true', help='Show what would be printed')
+    process_parser = subparsers.add_parser("process", help="Process pending jobs")
+    process_parser.add_argument(
+        "--continuous", action="store_true", help="Keep processing until queue empty"
+    )
+    process_parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be printed"
+    )
 
     # Queue name argument (global)
-    parser.add_argument('--queue-name', help='Name of CUPS queue (defaults to config value)')
+    parser.add_argument(
+        "--queue-name", help="Name of CUPS queue (defaults to config value)"
+    )
 
     args = parser.parse_args()
 
@@ -254,8 +274,8 @@ Examples:
 
     if args.queue_name:
         queue_name = args.queue_name
-    elif config.get('cups', {}).get('enabled'):
-        queue_name = config['cups'].get('queue_name', 'BrotherVC500W')
+    elif config.get("cups", {}).get("enabled"):
+        queue_name = config["cups"].get("queue_name", "BrotherVC500W")
     else:
         print("ERROR: CUPS mode not enabled", file=sys.stderr)
         print("Run 'label-queue-setup' to configure CUPS queue", file=sys.stderr)
@@ -264,10 +284,10 @@ Examples:
     # Execute command
     manager = QueueManager(queue_name)
 
-    if args.command in ['list', 'ls']:
+    if args.command in ["list", "ls"]:
         manager.list_jobs(show_all=args.all)
 
-    elif args.command in ['cancel', 'rm']:
+    elif args.command in ["cancel", "rm"]:
         if args.all:
             manager.cancel_all_jobs(purge=args.purge)
         elif args.job_id:
@@ -276,23 +296,24 @@ Examples:
             print("ERROR: Specify job ID or --all", file=sys.stderr)
             sys.exit(1)
 
-    elif args.command == 'hold':
+    elif args.command == "hold":
         manager.hold_job(args.job_id)
 
-    elif args.command == 'release':
+    elif args.command == "release":
         manager.release_job(args.job_id)
 
-    elif args.command == 'status':
+    elif args.command == "status":
         manager.get_queue_status()
 
-    elif args.command == 'process':
+    elif args.command == "process":
         # Convenience wrapper - just call label-queue-worker
         import subprocess
-        cmd = ['label-queue-worker']
+
+        cmd = ["label-queue-worker"]
         if args.continuous:
-            cmd.append('--continuous')
+            cmd.append("--continuous")
         if args.dry_run:
-            cmd.append('--dry-run')
+            cmd.append("--dry-run")
 
         sys.exit(subprocess.call(cmd))
 
