@@ -232,7 +232,7 @@ Examples:
     release_parser.add_argument('job_id', type=int, help='Job ID to release')
 
     # Status command
-    status_parser = subparsers.add_parser('status', help='Show queue status')
+    subparsers.add_parser('status', help='Show queue status')
 
     # Process command (convenience wrapper for label-queue-worker)
     process_parser = subparsers.add_parser('process', help='Process pending jobs')

@@ -16,7 +16,9 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import re; import os; import time
+import re
+import os
+import time
 
 class LabelPrinter:
     def __init__(self, connection):
@@ -47,7 +49,7 @@ class LabelPrinter:
         return lock
 
     def release(self, job_number = None):
-        if job_number == None:
+        if job_number is None:
             job_number = self._active_job
 
         release = self._send_and_expect(Release(job_number), ReleaseAnswer)
@@ -68,7 +70,7 @@ class LabelPrinter:
         max_attempts = int(timeout / 2.5)  # Each iteration waits 2.5 seconds
         attempts = 0
 
-        while job_status == None or job_status.print_state != "IDLE":
+        while job_status is None or job_status.print_state != "IDLE":
             if attempts >= max_attempts:
                 elapsed = time.time() - start_time
                 state = job_status.print_state if job_status else "UNKNOWN"
@@ -97,10 +99,10 @@ class Question:
 
 class RegexReader:
     def get_numeric_XML_value_regex(self, name):
-        return re.compile('.*<%s>(\d+)</%s>.*' % (name, name), re.I | re.S)
+        return re.compile(r'.*<%s>(\d+)</%s>.*' % (name, name), re.I | re.S)
 
     def get_float_XML_value_regex(self, name):
-        return re.compile('.*<%s>([0-9\.]+)</%s>.*' % (name, name), re.I | re.S)
+        return re.compile(r'.*<%s>([0-9\.]+)</%s>.*' % (name, name), re.I | re.S)
 
     def get_string_XML_value_regex(self, name):
         return re.compile('.*<%s>(.+)</%s>.*' % (name, name), re.I | re.S)
@@ -110,7 +112,7 @@ class RegexReader:
 
         if match:
             return int(match.group(1))
-        elif default == None:
+        elif default is None:
             raise ValueError('Could not parse XML for %s' % name)
         else:
             return default
@@ -120,7 +122,7 @@ class RegexReader:
 
         if match:
             return float(match.group(1))
-        elif default == None:
+        elif default is None:
             raise ValueError('Could not parse XML for %s' % name)
         else:
             return default
@@ -130,7 +132,7 @@ class RegexReader:
 
         if match:
             return match.group(1)
-        elif default == None:
+        elif default is None:
             raise ValueError('Could not parse XML for %s' % name)
         else:
             return default
@@ -163,7 +165,7 @@ class Answer(RegexReader):
                         raise ValueError('The XML status code is not OK: "%s"' % status.comment)
                     else:
                         raise ValueError('The XML status code is not OK.')
-                elif expected_start == None:
+                elif expected_start is None:
                     self._process_data(data[0:status_end+9])
                 elif status.datasize < 0:
                     raise ValueError('The XML datasize is invalid.')
@@ -201,7 +203,7 @@ class Config(Answer):
 
 class GetStatus(Question):
     def __init__(self, job_token = None):
-        if job_token == None:
+        if job_token is None:
             Question.__init__(self, '<read>\n<path>/status.xml</path>\n</read>')
         else:
             Question.__init__(self, '<read>\n<path>/status.xml</path>\n<job_token>%s</job_token>\n</read>' % job_token)

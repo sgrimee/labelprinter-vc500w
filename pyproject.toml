@@ -27,3 +27,9 @@ label-queue-setup = "labelprinter.queue_setup:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["labelprinter*"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+    "ruff>=0.14.4",
+]

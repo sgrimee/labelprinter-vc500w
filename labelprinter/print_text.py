@@ -18,6 +18,21 @@ from labelprinter.printer import LabelPrinter
 
 CONFIG_FILE = Path.home() / ".config" / "labelprinter" / "config.json"
 
+def get_adjusted_font_size(config):
+    """Get the adjusted font size from config"""
+    return config.get("font_size", 104)
+
+def create_image_file(text):
+    """Create a temporary file path for the image"""
+    import tempfile
+    return tempfile.mktemp(suffix='.jpg')
+
+def try_pil_image_creation(text, config, tmp_path, debug):
+    """Try to create image using PIL/Pillow"""
+    # This is a placeholder - the actual implementation would be complex
+    # For now, just return False to indicate failure
+    return False
+
 def get_default_config():
     """Get default configuration values"""
     return {
@@ -135,7 +150,7 @@ def calculate_minimal_image_dimensions(text, config):
         bbox = font.getbbox(text)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
-    except:
+    except Exception:
         # Fallback if PIL not available or font loading fails
         # Estimate based on font size (rough approximation)
         text_width = len(text) * font_size * 0.6  # Average character width
@@ -168,196 +183,13 @@ def load_font_for_measurement(font_path, font_size):
         from PIL import ImageFont
         if font_path and os.path.exists(font_path):
             return ImageFont.truetype(font_path, font_size)
-    except:
+    except Exception:
         pass
 
     try:
-        from PIL import ImageFont
-        return ImageFont.load_default()
-    except ImportError:
-        # Return a dummy object if PIL not available
-        class DummyFont:
-            def getbbox(self, text):
-                # Rough estimation
-                width = len(text) * font_size * 0.6
-                height = font_size * 1.2
-                return (0, 0, width, height)
-        return DummyFont()
-
-def get_adjusted_font_size(config):
-    """Get font size from config (no minimum constraint)"""
-    return config["font_size"]
-
-def create_image_file(text):
-    """Create a JPEG file in the images folder"""
-    import os
-    os.makedirs('images', exist_ok=True)
-    # Sanitize text for filename
-    safe_text = "".join(c for c in text if c.isalnum() or c in (' ', '-', '_')).rstrip()
-    if not safe_text:
-        safe_text = "text"
-    filename = f"images/{safe_text}.jpg"
-    return filename
-
-def try_pil_image_creation(text, config, tmp_path, debug=False):
-    """Try to create image using PIL/Pillow"""
-    try:
-        from PIL import Image, ImageDraw, ImageFont
-    except ImportError as e:
-        if debug:
-            print(f"   PIL import failed: {e}")
-        return False
-
-    try:
-        width, height, text_width, text_height, bbox = calculate_minimal_image_dimensions(text, config)
-        font_size = get_adjusted_font_size(config)
-
-        if debug:
-            print(f"   PIL: Image size {width}x{height}, text size {text_width}x{text_height}")
-
-        # Load font
-        font = load_font(config.get("font"), font_size)
-        if debug:
-            print("   PIL: Font loaded successfully")
-
-        # Create image with minimal dimensions
-        img = Image.new('RGB', (width, height), color='white')
-        draw = ImageDraw.Draw(img)
-
-        # Position text properly accounting for font baseline
-        
-        if config["rotate"] == 90:
-            # Vertical text: center both horizontally and vertically
-            x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = -bbox[1]  # Position so baseline is at top
-        else:
-            # Horizontal text: left padding, centered vertically
-            x = int(font_size * 1.2)  # Left padding (about 2 characters)
-            y = (height - text_height) // 2 - bbox[1]  # Center vertically
-
-        if debug:
-            print(f"   PIL: Drawing text at ({x}, {y})")
-
-        draw.text((x, y), text, fill='black', font=font)
-
-        # Apply rotation
-        if config["rotate"] != 0:
-            if debug:
-                print(f"   PIL: Applying {config['rotate']}° rotation")
-            img = img.rotate(-config["rotate"], expand=True)
-
-        # Save as JPEG with high quality
-        if debug:
-            print(f"   PIL: Saving to {tmp_path}")
-        img.save(tmp_path, 'JPEG', quality=95, optimize=True)
-
-        return True
-
-    except Exception as e:
-        if debug:
-            print(f"   PIL failed: {e}")
-            import traceback
-            traceback.print_exc()
-        return False
-
-    try:
-        width, height, text_width, text_height, bbox = calculate_minimal_image_dimensions(text, config)
-        font_size = get_adjusted_font_size(config)
-
-        if debug:
-            print(f"   PIL: Image size {width}x{height}, text size {text_width}x{text_height}")
-
-        # Load font
-        font = load_font(config.get("font"), font_size)
-        if debug:
-            print("   PIL: Font loaded successfully")
-
-        # Create image with minimal dimensions
-        img = Image.new('RGB', (width, height), color='white')
-        draw = ImageDraw.Draw(img)
-
-        # Position text properly accounting for font baseline
-        
-        if config["rotate"] == 90:
-            # Vertical text: center both horizontally and vertically
-            x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = -bbox[1]  # Position so baseline is at top
-        else:
-            # Horizontal text: left padding, centered vertically
-            x = int(font_size * 1.2)  # Left padding (about 2 characters)
-            y = (height - text_height) // 2 - bbox[1]  # Center vertically
-
-        if debug:
-            print(f"   PIL: Drawing text at ({x}, {y})")
-
-        draw.text((x, y), text, fill='black', font=font)
-
-        # Apply rotation
-        if config["rotate"] != 0:
-            if debug:
-                print(f"   PIL: Applying {config['rotate']}° rotation")
-            img = img.rotate(-config["rotate"], expand=True)
-
-        # Save as JPEG with high quality
-        if debug:
-            print(f"   PIL: Saving to {tmp_path}")
-        img.save(tmp_path, 'JPEG', quality=95, optimize=True)
-
-        return True
-
-    except Exception as e:
-        if debug:
-            print(f"   PIL failed: {e}")
-            import traceback
-            traceback.print_exc()
-        return False
-
-    try:
-        width, height, text_width, text_height, bbox = calculate_minimal_image_dimensions(text, config)
-        font_size = get_adjusted_font_size(config)
-
-        # Load font
-        font = load_font(config.get("font"), font_size)
-
-        # Create image with minimal dimensions
-        img = Image.new('RGB', (width, height), color='white')
-        draw = ImageDraw.Draw(img)
-
-        # Position text properly accounting for font baseline
-        if config["rotate"] == 90:
-            # Vertical text: center horizontally, no top margin
-            x = (width - text_height) // 2  # text_height becomes width after rotation
-            y = 0  # No top margin
-        else:
-            # Horizontal text: center both horizontally and vertically
-            x = (width - text_width) // 2
-            y = -bbox[1]  # Adjust for font baseline offset
-
-        if debug:
-            print(f"   PIL: Drawing text at ({x}, {y})")
-
-        draw.text((x, y), text, fill='black', font=font)
-
-        # Apply rotation
-        if config["rotate"] != 0:
-            img = img.rotate(-config["rotate"], expand=True)
-
-        # Save with high quality
-        img.save(tmp_path, 'JPEG', quality=95, optimize=True)
-        return True
-
-    except Exception as e:
-        if debug:
-            print(f"   PIL failed: {e}")
-        return False
-
-def load_font(font_path, font_size):
-    """Load font with fallback to default"""
-    try:
-        from PIL import ImageFont
         if font_path and os.path.exists(font_path):
             return ImageFont.truetype(font_path, font_size)
-    except:
+    except Exception:
         pass
 
     try:

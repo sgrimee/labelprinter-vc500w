@@ -97,7 +97,7 @@ class Connection:
         try:
             self._socket.settimeout(self._timeout_flush)
             self._socket.recv(4096)
-        except:
+        except Exception:
             pass
         finally:
             self._socket.settimeout(self._timeout_standard)
