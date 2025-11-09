@@ -8,6 +8,10 @@ default:
     @echo "  print-text              Print horizontal text label"
     @echo "  preview-text            Preview text label (dry-run + preview)"
     @echo "  install                 Install dependencies"
+    @echo "  test                    Run tests with pytest"
+    @echo "  format                  Format code with ruff"
+    @echo "  type-check              Run type checking with mypy"
+    @echo "  check                   Run format and type-check"
 
 # Get the IP address of the Brother VC-500W label printer
 printer-ip:
@@ -28,3 +32,18 @@ print-text text:
 # Preview text label (dry-run + preview)
 preview-text text:
     label-text "{{text}}" --rotate 0 --dry-run --preview
+
+# Run tests with pytest
+test:
+    uv run pytest labelprinter/test/
+
+# Format code with ruff
+format:
+    uv run ruff check --fix .
+
+# Run type checking with mypy
+type-check:
+    uv run mypy .
+
+# Run format and type-check
+check: format type-check

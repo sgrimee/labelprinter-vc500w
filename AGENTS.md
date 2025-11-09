@@ -3,10 +3,11 @@
 ## Build/Lint/Test Commands
 
 - **Install dependencies**: `just install` or `pip install -e .`
-- **Format code**: `just format` or `black labelprinter/`
-- **Lint code**: `just lint` or `flake8 labelprinter/`
-- **Run tests**: `just test` or `pytest labelprinter/test/`
-- **Run single test**: `pytest labelprinter/test/test_printer.py::TestPrinter::test_method_name`
+- **Format code**: `just format` or `uv run ruff check --fix .`
+- **Type check**: `just type-check` or `uv run mypy .`
+- **Check code**: `just check` (runs format and type-check)
+- **Run tests**: `just test` or `uv run pytest labelprinter/test/`
+- **Run single test**: `uv run pytest labelprinter/test/test_printer.py::TestPrinter::test_method_name`
 - **Test printer connection**: `just test-printer` or `python -m labelprinter.test.test_printer`
 - **Run main module**: `just run` or `python -m labelprinter`
 - **Generate test label**: `just preview-text "Test Label"`
