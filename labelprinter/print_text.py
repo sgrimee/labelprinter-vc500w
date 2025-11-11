@@ -25,17 +25,73 @@ def get_adjusted_font_size(config):
 
 
 def create_image_file(text):
-    """Create a temporary file path for the image"""
+    """Create a file path for the image in a dedicated directory"""
     import tempfile
+    from pathlib import Path
 
-    return tempfile.mktemp(suffix=".jpg")
+    # Create dedicated directory for label images
+    labels_dir = Path.home() / ".local" / "share" / "labelprinter" / "images"
+    labels_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create temporary file in the labels directory
+    fd, path = tempfile.mkstemp(suffix=".jpg", dir=str(labels_dir))
+    import os
+
+    os.close(fd)  # Close the file descriptor, we just need the path
+
+    return path
 
 
 def try_pil_image_creation(text, config, tmp_path, debug):
     """Try to create image using PIL/Pillow"""
-    # This is a placeholder - the actual implementation would be complex
-    # For now, just return False to indicate failure
-    return False
+    try:
+        from PIL import Image, ImageDraw
+
+        # Get dimensions (already calculated in create_text_image)
+        width, height, text_width, text_height, bbox = (
+            calculate_minimal_image_dimensions(text, config)
+        )
+
+        # Create white image
+        image = Image.new("RGB", (width, height), "white")
+        draw = ImageDraw.Draw(image)
+
+        # Load font
+        font = load_font_for_measurement(config.get("font"), config["font_size"])
+
+        # Calculate text position
+        font_size = get_adjusted_font_size(config)
+        left_padding = int(font_size * 1.2)  # ~2 character widths
+
+        if config["rotate"] == 90:
+            # For vertical text, position at bottom left
+            x = (height - text_height) // 2 - bbox[1] if bbox else 0
+            y = width - left_padding  # Start from right edge
+        else:
+            # For horizontal text, center vertically with left padding
+            x = left_padding
+            y = (
+                (height - text_height) // 2 - bbox[1]
+                if bbox
+                else (height - text_height) // 2
+            )
+
+        # Draw text
+        draw.text((x, y), text, fill="black", font=font)
+
+        # Rotate if needed
+        if config["rotate"] != 0:
+            image = image.rotate(-config["rotate"], expand=True)
+
+        # Save image
+        image.save(tmp_path, "JPEG", quality=95)
+
+        return True
+
+    except Exception as e:
+        if debug:
+            print(f"   PIL creation failed: {e}")
+        return False
 
 
 def get_default_config():
@@ -188,13 +244,7 @@ def calculate_minimal_image_dimensions(text, config):
 
 def load_font_for_measurement(font_path, font_size):
     """Load font for text measurement, with fallbacks"""
-    try:
-        from PIL import ImageFont
-
-        if font_path and os.path.exists(font_path):
-            return ImageFont.truetype(font_path, font_size)
-    except Exception:
-        pass
+    from PIL import ImageFont  # type: ignore[import-not-found]
 
     try:
         if font_path and os.path.exists(font_path):
@@ -203,10 +253,14 @@ def load_font_for_measurement(font_path, font_size):
         pass
 
     try:
-        from PIL import ImageFont
+        if font_path and os.path.exists(font_path):
+            return ImageFont.truetype(font_path, font_size)
+    except Exception:
+        pass
 
+    try:
         return ImageFont.load_default()
-    except ImportError:
+    except Exception:
         raise RuntimeError("PIL/Pillow not available for font loading")
 
 
@@ -245,7 +299,7 @@ def create_text_image(text, config, debug=False):
 PRINT_TIMEOUT = 120  # 2 minutes
 
 
-def build_print_command(image_path, config):
+def build_print_command(image_path, config, force_direct=False):
     """Build the command to print the label"""
     # Try to use the installed label-raw command, fallback to python -m
     import shutil
@@ -257,7 +311,7 @@ def build_print_command(image_path, config):
         # Fallback for development mode
         base_cmd = ["python", "-m", "labelprinter"]
 
-    return base_cmd + [
+    cmd = base_cmd + [
         "--host",
         config["host"],
         "--print-jpeg",
@@ -267,6 +321,12 @@ def build_print_command(image_path, config):
         "--print-cut",
         "full",
     ]
+
+    # If direct mode is forced (cups disabled), pass --direct to label-raw
+    if force_direct or not config.get("cups", {}).get("enabled", False):
+        cmd.append("--direct")
+
+    return cmd
 
 
 def submit_to_cups(image_path, config, debug=False):
@@ -322,10 +382,10 @@ def submit_to_cups(image_path, config, debug=False):
         return 1
 
 
-def print_label(image_path, config, debug=False):
+def print_label(image_path, config, debug=False, force_direct=False):
     """Print the label using the main labelprinter module"""
     print("🔗 Building print command...")
-    cmd = build_print_command(image_path, config)
+    cmd = build_print_command(image_path, config, force_direct=force_direct)
 
     if debug:
         print(f"   Command: {' '.join(cmd)}")
@@ -563,7 +623,11 @@ def handle_printing(image_path, config, args):
         return 0
     else:
         print("\n🖨️  Phase 2: Printing label...")
-        result = print_label(image_path, config, debug=args.debug)
+        # Pass cups_enabled=False as force_direct=True to ensure label-raw also uses direct mode
+        force_direct = not cups_enabled
+        result = print_label(
+            image_path, config, debug=args.debug, force_direct=force_direct
+        )
         if result == 1:
             # Error already printed by print_label
             return 1

@@ -14,12 +14,12 @@ dependencies = [
 
 [project.optional-dependencies]
 cups = [
-    "pycups>=2.0.0",
+    "pycups==2.0.1",
 ]
 
 [project.scripts]
 label-text = "labelprinter.print_text:main"
-label-direct = "labelprinter.__main__:main"
+label-raw = "labelprinter.__main__:main"
 label-queue = "labelprinter.queue_manager:main"
 label-queue-worker = "labelprinter.queue_worker:main"
 label-queue-setup = "labelprinter.queue_setup:main"

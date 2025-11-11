@@ -7,7 +7,7 @@ default:
     @echo "  setup-printer           Detect and save printer hostname to config"
     @echo "  print-text              Print horizontal text label"
     @echo "  preview-text            Preview text label (dry-run + preview)"
-    @echo "  install                 Install dependencies"
+    @echo "  install                 Install cli system wide"
     @echo "  test                    Run tests with pytest"
     @echo "  format                  Format code with ruff"
     @echo "  type-check              Run type checking with mypy"
@@ -21,17 +21,17 @@ printer-ip:
 setup-printer:
     python3 setup_printer.py
 
-# Install dependencies
+# Install the cli system-wide
 install:
-    uv venv && uv pip install -e .
+    uv tool install . --force --reinstall --with pycups
 
 # Print horizontal text label
 print-text text:
-    label-text "{{text}}" --rotate 0
+    uv run python3 -m labelprinter.print_text "{{text}}" --rotate 0
 
 # Preview text label (dry-run + preview)
 preview-text text:
-    label-text "{{text}}" --rotate 0 --dry-run --preview
+    uv run python3 -m labelprinter.print_text "{{text}}" --rotate 0 --dry-run --preview
 
 # Run tests with pytest
 test:

@@ -93,21 +93,22 @@ class QueueWorker:
             doc_name = job_info.get("document-name-supplied", "")
 
             if doc_name:
-                # Try as absolute path first
+                # Try as absolute path first (if full path was provided)
                 image_file = Path(doc_name)
-                if image_file.exists():
+                if image_file.is_absolute() and image_file.exists():
                     self.log(f"Found image file: {image_file}")
                     return image_file
 
-                # Otherwise look in images/ directory
-                image_file = Path("images") / doc_name
-                if image_file.exists():
-                    self.log(f"Found image file: {image_file}")
-                    return image_file
-
-                self.log(
-                    f"Image file not found: {doc_name} (tried both absolute and images/)"
+                # Look in the dedicated labels directory
+                labels_dir = (
+                    Path.home() / ".local" / "share" / "labelprinter" / "images"
                 )
+                image_file = labels_dir / doc_name
+                if image_file.exists():
+                    self.log(f"Found image file: {image_file}")
+                    return image_file
+
+                self.log(f"Image file not found: {doc_name} (tried {labels_dir})")
             else:
                 self.log("No document name in job info")
 
@@ -133,9 +134,17 @@ class QueueWorker:
         # Get the job file
         job_file = self.get_job_file(job_id, job_info)
         if not job_file or not job_file.exists():
-            error = f"Job file not found for job {job_id}"
+            error = "Job file not found (likely cleaned up or old job)"
             self.log(f"✗ {error}", force=True)
-            return (False, error, False)  # Don't retry, file is missing
+            self.log(f"  Auto-canceling stale job {job_id}", force=True)
+            # Cancel the job since the file is missing
+            try:
+                self.conn.cancelJob(job_id, purge_job=True)
+                self.log(f"  ✓ Job {job_id} canceled", force=True)
+            except Exception as e:
+                self.log(f"  Warning: Could not cancel job: {e}", force=True)
+            # Return success=True to avoid "failed" tracking, but with special marker
+            return (True, None, False)  # Treated as handled
 
         self.log(f"Job file: {job_file}")
 
@@ -150,6 +159,7 @@ class QueueWorker:
             self.config["host"],
             "--print-jpeg",
             str(job_file),
+            "--direct",  # Force direct printing (avoid re-queuing to CUPS)
         ]
 
         # Note: label-raw doesn't have --debug flag
@@ -157,7 +167,8 @@ class QueueWorker:
 
         # Execute label-raw
         try:
-            self.log(f"Executing: {' '.join(cmd)}")
+            if self.verbose:
+                self.log(f"Executing: {' '.join(cmd)}")
 
             result = subprocess.run(
                 cmd,
@@ -168,6 +179,16 @@ class QueueWorker:
 
             if result.returncode == 0:
                 self.log(f"✓ Job {job_id} printed successfully", force=True)
+                # Delete the image file to prevent CUPS respooling from processing it again
+                try:
+                    job_file.unlink()
+                    self.log(
+                        "  Deleted image file to prevent reprocessing", force=False
+                    )
+                except Exception as e:
+                    self.log(
+                        f"  Warning: Could not delete image file: {e}", force=False
+                    )
                 return (True, None, False)
             else:
                 error_output = result.stderr.strip() or result.stdout.strip()
@@ -197,15 +218,17 @@ class QueueWorker:
             return (False, error, False)  # Don't retry unexpected errors
 
     def mark_job_completed(self, job_id):
-        """Mark a job as completed in CUPS"""
+        """
+        Mark a job as completed by canceling it from CUPS queue
+        """
         try:
-            self.conn.cancelJob(job_id, purge_job=False)
+            self.conn.cancelJob(job_id, purge_job=True)
+            self.log(f"  ✓ Job {job_id} removed from CUPS queue", force=False)
             return True
-        except cups.IPPError as e:
-            self.log(
-                f"Warning: Could not mark job {job_id} as completed: {e}", force=True
-            )
-            return False
+        except Exception as e:
+            self.log(f"  Warning: Could not cancel job from CUPS: {e}", force=True)
+            # Still return True since the print succeeded
+            return True
 
     def mark_job_failed(self, job_id, error_message):
         """

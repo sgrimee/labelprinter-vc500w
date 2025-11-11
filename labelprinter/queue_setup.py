@@ -44,7 +44,9 @@ def create_cups_queue(queue_name, description, location):
     """
     Create a CUPS queue that accepts jobs but keeps them pending
 
-    We create a disabled printer that accepts jobs but doesn't process them.
+    Uses file:///dev/null backend which causes CUPS to respool jobs.
+    The worker deletes image files after printing, so respooled jobs
+    fail and are auto-canceled on next worker run.
     """
     try:
         # Create a queue without enabling it (-E)
@@ -54,7 +56,7 @@ def create_cups_queue(queue_name, description, location):
             "-p",
             queue_name,
             "-v",
-            "file:///dev/null",  # Dummy device
+            "file:///dev/null",  # Null device - jobs complete immediately without output
             "-D",
             description,
             "-L",
@@ -65,10 +67,15 @@ def create_cups_queue(queue_name, description, location):
 
         subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-        # Accept jobs but keep printer disabled/stopped
-        # This way jobs will queue but won't print
+        # Accept jobs but keep printer stopped
+        # This way jobs will queue but won't print automatically
         subprocess.run(
             ["cupsaccept", queue_name], check=True, capture_output=True, text=True
+        )
+
+        # Stop the printer to prevent automatic processing
+        subprocess.run(
+            ["cupsdisable", queue_name], check=True, capture_output=True, text=True
         )
 
         return True

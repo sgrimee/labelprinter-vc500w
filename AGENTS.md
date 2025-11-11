@@ -2,7 +2,7 @@
 
 ## Build/Lint/Test Commands
 
-- **Install dependencies**: `just install` or `pip install -e .`
+- **Install dependencies**: `just install` or `uv sync`
 - **Format code**: `just format` or `uv run ruff check --fix .`
 - **Type check**: `just type-check` or `uv run mypy .`
 - **Check code**: `just check` (runs format and type-check)
@@ -11,6 +11,25 @@
 - **Test printer connection**: `just test-printer` or `python -m labelprinter.test.test_printer`
 - **Run main module**: `just run` or `python -m labelprinter`
 - **Generate test label**: `just preview-text "Test Label"`
+
+## System Dependencies
+
+For CUPS support (`uv sync --all-extras`), you need:
+
+- **C compiler** (gcc or clang)
+- **CUPS development libraries** (cups-dev, libcups2-dev, etc.)
+
+On Ubuntu/Debian:
+```bash
+sudo apt-get install build-essential libcups2-dev
+```
+
+On macOS:
+```bash
+brew install cups
+```
+
+On NixOS, the flake provides these automatically.
 
 ## Label Image Generation Requirements
 
