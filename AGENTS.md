@@ -1,5 +1,28 @@
 # AGENTS.md
 
+## Important: Never Print Labels Spontaneously
+
+⚠️ **CRITICAL:** Do NOT run any print commands without explicit user approval. This includes:
+- `just print-text` or `just print-text-direct`
+- `label-text` or similar printing commands
+- Any subprocess that prints to the physical printer
+
+Always ask the user before printing. This prevents unwanted label waste and respects the user's intent.
+
+When testing print functionality:
+1. **Always use `--dry-run`** flag to generate image without printing
+2. **Ask the user explicitly** if they want to actually print after verifying the output
+3. **Show the preview** using `--preview` or `--dry-run` to confirm before printing
+
+Example safe testing:
+```bash
+# Safe: Creates image but doesn't print
+label-text "TEST" --dry-run --preview
+
+# Only after user approves:
+label-text "TEST" --direct
+```
+
 ## Build/Lint/Test Commands
 
 - **Install dependencies**: `just install` or `uv sync`

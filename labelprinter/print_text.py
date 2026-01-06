@@ -319,6 +319,7 @@ def detect_tape_width(host, port=9100, timeout=10):
         - If successful: (width_mm, None)
         - If failed: (None, error_message)
     """
+    connection = None
     try:
         print(f"🔍 Detecting tape width from printer at {host}...")
         connection = Connection(host, port)
@@ -346,6 +347,9 @@ def detect_tape_width(host, port=9100, timeout=10):
     except Exception as e:
         error_msg = f"Could not detect tape width: {str(e)}"
         return (None, error_msg)
+    finally:
+        if connection:
+            connection.close()
 
 
 # Constants are now loaded from config file
@@ -543,7 +547,11 @@ def submit_to_cups(image_path, config, debug=False):
 
 
 def print_label(image_path, config, debug=False, force_direct=False):
-    """Print the label using the main labelprinter module"""
+    """Print the label using the main labelprinter module
+
+    Returns:
+        int: 0 for success, 1 for failure
+    """
     print("🔗 Building print command...")
     cmd = build_print_command(image_path, config, force_direct=force_direct)
 
@@ -575,7 +583,7 @@ def print_label(image_path, config, debug=False, force_direct=False):
 
         duration = end_time - start_time
         print(f"✅ Print completed in {duration:.1f} seconds")
-        return result
+        return 0  # Return success code
 
     except subprocess.TimeoutExpired:
         raise RuntimeError(
