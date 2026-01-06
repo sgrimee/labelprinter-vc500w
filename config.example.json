@@ -1,13 +1,25 @@
 {
   "host": "VC-500W4188.local",
-  "label_width_mm": 25,
-  "font_size": 104,
   "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
   "padding": 50,
   "rotate": 0,
   "pixels_per_mm": 12.48,
   "text_padding_pixels": 0,
   "print_timeout": 120,
-  "avahi_timeout": 10
+  "avahi_timeout": 10,
+  "default_tape_width_mm": 25,
+  "tape_presets": {
+    "9": {"font_size": 37},
+    "12": {"font_size": 50},
+    "13": {"font_size": 54},
+    "19": {"font_size": 79},
+    "25": {"font_size": 104},
+    "50": {"font_size": 208}
+  },
+  "cups": {
+    "enabled": false,
+    "queue_name": "BrotherVC500W",
+    "auto_process": false
+  }
 }</content>
 <parameter name="filePath">config.example.json

@@ -18,6 +18,32 @@ from labelprinter.printer import LabelPrinter
 
 CONFIG_FILE = Path.home() / ".config" / "labelprinter" / "config.json"
 
+# Tape width detection mapping
+# Some printers report slightly different widths than the actual tape width
+# This maps detected widths to canonical widths
+TAPE_WIDTH_MAPPING = {
+    13: 12,  # Printer reports 13mm for 12mm tape (firmware rounding)
+    # Add more mappings as needed
+}
+
+
+def normalize_tape_width(detected_width_mm):
+    """
+    Normalize detected tape width to a canonical width.
+
+    Some printers report tape width slightly differently than the actual tape.
+    This function maps known discrepancies to the correct width.
+
+    Args:
+        detected_width_mm: Width reported by printer in mm
+
+    Returns:
+        Normalized width in mm
+    """
+    # Map to integer first for comparison
+    width_int = round(detected_width_mm)
+    return TAPE_WIDTH_MAPPING.get(width_int, width_int)
+
 
 def get_adjusted_font_size(config):
     """Get the adjusted font size from config"""
@@ -95,21 +121,32 @@ def try_pil_image_creation(text, config, tmp_path, debug):
 
 
 def get_default_config():
-    """Get default configuration values"""
+    """Get default configuration values with tape presets"""
     return {
-        # Printer settings
+        # Printer connection settings
         "host": "VC-500W4188.local",
-        "label_width_mm": 25,
-        "font_size": 104,  # ~1/3 of label width for optimal readability (25mm tape)
+        # Font settings (global)
         "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
-        "padding": 50,
-        "rotate": 0,
-        # Image generation settings
+        # Image generation settings (global)
+        "padding": 50,  # Left/right padding in pixels (~2 character widths)
+        "rotate": 0,  # Rotation in degrees (0, 90, 180, 270)
         "pixels_per_mm": 12.48,  # Brother VC-500W resolution: ~317 lpi
         "text_padding_pixels": 0,  # No padding for minimal waste
         # Timeout settings
         "print_timeout": 120,  # 2 minutes
         "avahi_timeout": 10,  # 10 seconds
+        # Default tape width (used if detection fails)
+        "default_tape_width_mm": 25,
+        # Tape-specific font size presets
+        # Calculated as: tape_width_mm * pixels_per_mm * 0.33
+        "tape_presets": {
+            "9": {"font_size": 37},
+            "12": {"font_size": 50},
+            "13": {"font_size": 54},  # For printers that report 13mm instead of 12mm
+            "19": {"font_size": 79},
+            "25": {"font_size": 104},
+            "50": {"font_size": 208},
+        },
         # CUPS queue settings (optional)
         "cups": {
             "enabled": False,  # Set to True to use CUPS queue mode
@@ -120,7 +157,7 @@ def get_default_config():
 
 
 def load_config():
-    """Load printer configuration with defaults"""
+    """Load printer configuration with defaults and migration"""
     default_config = get_default_config()
 
     if not CONFIG_FILE.exists():
@@ -130,11 +167,22 @@ def load_config():
         with open(CONFIG_FILE, "r") as f:
             user_config = json.load(f)
 
+        # Check if migration is needed before loading
+        needs_migration = "tape_presets" not in user_config
+
+        # Migrate legacy config format if needed
+        user_config = migrate_legacy_config(user_config)
+
+        # Merge with defaults (user config takes precedence)
         merged_config = {**default_config, **user_config}
 
         # Update deprecated font values
         if merged_config.get("font") in ["Arial", "DejaVu-Sans"]:
             merged_config["font"] = default_config["font"]
+            save_config(merged_config)
+
+        # Save config if it was migrated or changed
+        if needs_migration or user_config != merged_config:
             save_config(merged_config)
 
         return merged_config
@@ -159,6 +207,109 @@ def save_config(config):
         json.dump(config, f, indent=2)
 
 
+def migrate_legacy_config(old_config):
+    """
+    Migrate legacy config format to new format with tape presets.
+
+    Legacy format has:
+    - label_width_mm at top level
+    - font_size at top level
+
+    New format has:
+    - default_tape_width_mm (from old label_width_mm)
+    - tape_presets with font_size per width
+
+    Args:
+        old_config: Old config dictionary
+
+    Returns:
+        Migrated config dictionary
+    """
+    if "tape_presets" in old_config:
+        # Already new format
+        return old_config
+
+    print("📝 Migrating config to new tape preset format...")
+
+    # Backup old config
+    backup_path = CONFIG_FILE.with_suffix(".json.bak")
+    if not backup_path.exists():
+        with open(backup_path, "w") as f:
+            json.dump(old_config, f, indent=2)
+        print(f"   ✓ Backed up old config to {backup_path}")
+
+    # Get default config structure
+    new_config = get_default_config()
+
+    # Preserve user's settings
+    new_config["host"] = old_config.get("host", new_config["host"])
+    new_config["font"] = old_config.get("font", new_config["font"])
+    new_config["padding"] = old_config.get("padding", new_config["padding"])
+    new_config["rotate"] = old_config.get("rotate", new_config["rotate"])
+    new_config["pixels_per_mm"] = old_config.get(
+        "pixels_per_mm", new_config["pixels_per_mm"]
+    )
+    new_config["text_padding_pixels"] = old_config.get(
+        "text_padding_pixels", new_config["text_padding_pixels"]
+    )
+    new_config["print_timeout"] = old_config.get(
+        "print_timeout", new_config["print_timeout"]
+    )
+    new_config["avahi_timeout"] = old_config.get(
+        "avahi_timeout", new_config["avahi_timeout"]
+    )
+    new_config["cups"] = old_config.get("cups", new_config["cups"])
+
+    # Migrate label_width_mm to default_tape_width_mm
+    if "label_width_mm" in old_config:
+        new_config["default_tape_width_mm"] = old_config["label_width_mm"]
+        print(
+            f"   ✓ Migrated label_width_mm → default_tape_width_mm: {old_config['label_width_mm']}mm"
+        )
+
+    # Migrate font_size to tape preset if it was customized
+    if "font_size" in old_config and old_config.get("label_width_mm"):
+        old_width = str(old_config["label_width_mm"])
+        old_font_size = old_config["font_size"]
+
+        # Add preset for the old tape width if it doesn't exist
+        if old_width not in new_config["tape_presets"]:
+            new_config["tape_presets"][old_width] = {}
+
+        # Update preset with the user's custom font size
+        new_config["tape_presets"][old_width]["font_size"] = old_font_size
+        print(f"   ✓ Preserved font_size for {old_width}mm tape: {old_font_size}")
+
+    print("✅ Config migration complete")
+    return new_config
+
+
+def get_preset_for_tape_width(tape_width_mm, config):
+    """
+    Get tape preset settings for a given tape width.
+
+    Looks up preset in config, or calculates sensible defaults if not found.
+
+    Args:
+        tape_width_mm: Tape width in millimeters
+        config: Configuration dict containing tape_presets
+
+    Returns:
+        dict: Settings for this tape width (e.g., {"font_size": 50})
+    """
+    width_str = str(tape_width_mm)
+
+    # Check if we have a preset for this width
+    if width_str in config.get("tape_presets", {}):
+        return config["tape_presets"][width_str]
+
+    # Calculate default based on formula: tape_width * pixels_per_mm * 0.33
+    pixels_per_mm = config.get("pixels_per_mm", 12.48)
+    calculated_font_size = int(tape_width_mm * pixels_per_mm * 0.33)
+
+    return {"font_size": calculated_font_size}
+
+
 def detect_tape_width(host, port=9100, timeout=10):
     """
     Detect the tape width from the printer
@@ -178,8 +329,17 @@ def detect_tape_width(host, port=9100, timeout=10):
         if config.tape_width:
             # Convert inches to mm
             width_mm = round(config.tape_width * 25.4)
-            print(f"   ✓ Detected {width_mm}mm tape installed")
-            return (width_mm, None)
+            # Normalize detected width (handles printer firmware quirks)
+            normalized_width = normalize_tape_width(width_mm)
+
+            if normalized_width != width_mm:
+                print(
+                    f"   ✓ Detected {width_mm}mm, normalized to {normalized_width}mm tape"
+                )
+            else:
+                print(f"   ✓ Detected {normalized_width}mm tape installed")
+
+            return (normalized_width, None)
         else:
             return (None, "No tape detected in printer")
 
@@ -648,7 +808,7 @@ def main():
     config = load_config()
     print(f"   Config file: {CONFIG_FILE}")
     print(f"   Default host: {config['host']}")
-    print(f"   Default width: {config['label_width_mm']}mm")
+    print(f"   Default tape width: {config.get('default_tape_width_mm', 25)}mm")
 
     # Apply overrides
     overrides = apply_config_overrides(config, args)
@@ -657,35 +817,45 @@ def main():
     if not args.width and not args.no_auto_detect:
         detected_width, error = detect_tape_width(config["host"])
         if detected_width:
-            config_width = config["label_width_mm"]
+            config_width = config.get("default_tape_width_mm", 25)
             if detected_width != config_width:
                 print(
-                    f"   ⚠️  Warning: Config has {config_width}mm but printer has {detected_width}mm tape"
+                    f"   ⚠️  Warning: Config default is {config_width}mm but printer has {detected_width}mm tape"
                 )
                 print(f"   → Using detected {detected_width}mm tape width")
-                config["label_width_mm"] = detected_width
-                overrides.append(f"Auto-detected width: {detected_width}mm")
+            else:
+                print(f"   ✓ Config matches detected width: {detected_width}mm")
 
-                # Suggest font size adjustment if not manually specified
-                if not args.font_size:
-                    # Recommend font size based on tape width (~1/3 of height for readability)
-                    suggested_font = int(
-                        detected_width * config["pixels_per_mm"] * 0.33
-                    )
-                    if (
-                        abs(config["font_size"] - suggested_font) > 20
-                    ):  # Significant difference
-                        print(
-                            f"   💡 Tip: For {detected_width}mm tape, try --font-size {suggested_font}"
-                        )
-            # else: detected matches config, silently use it
+            # Set tape width and get preset
+            config["label_width_mm"] = detected_width
+            preset = get_preset_for_tape_width(detected_width, config)
+            config["font_size"] = preset["font_size"]
+            overrides.append(
+                f"Auto-detected width: {detected_width}mm (font_size: {preset['font_size']})"
+            )
         else:
             print(f"   ⚠️  {error}")
-            print(f"   → Using config width: {config['label_width_mm']}mm")
+            print(
+                f"   → Using config default: {config.get('default_tape_width_mm', 25)}mm"
+            )
+            # Fall back to default width and its preset
+            default_width = config.get("default_tape_width_mm", 25)
+            config["label_width_mm"] = default_width
+            preset = get_preset_for_tape_width(default_width, config)
+            config["font_size"] = preset["font_size"]
     elif args.no_auto_detect and not args.width:
-        print(
-            f"   ℹ️  Auto-detection disabled, using config width: {config['label_width_mm']}mm"
-        )
+        default_width = config.get("default_tape_width_mm", 25)
+        print(f"   ℹ️  Auto-detection disabled, using config default: {default_width}mm")
+        config["label_width_mm"] = default_width
+        preset = get_preset_for_tape_width(default_width, config)
+        config["font_size"] = preset["font_size"]
+    elif args.width:
+        # User specified width via CLI
+        config["label_width_mm"] = args.width
+        if not args.font_size:
+            # Apply preset for specified width if font size not manually set
+            preset = get_preset_for_tape_width(args.width, config)
+            config["font_size"] = preset["font_size"]
 
     # Print final configuration
     print_configuration(args, config, overrides)
