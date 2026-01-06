@@ -65,7 +65,10 @@ class LabelPrinter:
         )
         self._connection.send_file(handle)
 
-        return PrintAnswer(self._connection.get_message(), self._connection.get_message)
+        return PrintAnswer(
+            self._connection.get_message(long_timeout=True),
+            self._connection.get_message(long_timeout=True),
+        )
 
     def wait_to_turn_idle(self, timeout=30):
         job_status = None
