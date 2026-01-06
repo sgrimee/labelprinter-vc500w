@@ -126,7 +126,7 @@ def get_default_config():
         # Printer connection settings
         "host": "VC-500W4188.local",
         # Font settings (global)
-        "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
+        "font": "/run/current-system/sw/share/X11/fonts/LiberationSans-Regular.ttf",
         # Image generation settings (global)
         "padding": 50,  # Left/right padding in pixels (~2 character widths)
         "rotate": 0,  # Rotation in degrees (0, 90, 180, 270)
