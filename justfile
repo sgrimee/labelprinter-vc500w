@@ -2,17 +2,7 @@
 
 # Default recipe - list all available actions
 default:
-	@echo "Available actions:"
-	@echo "  printer-ip              Get the IP address of the Brother VC-500W label printer"
-	@echo "  setup-printer           Detect and save printer hostname to config"
-	@echo "  print-text              Print horizontal text label"
-	@echo "  preview-text            Preview text label (dry-run + preview)"
-	@echo "  queue-worker            Start the label queue worker"
-	@echo "  install                 Install cli system wide"
-	@echo "  test                    Run tests with pytest"
-	@echo "  format                  Format code with ruff"
-	@echo "  type-check              Run type checking with mypy"
-	@echo "  check                   Run format and type-check"
+	@just --list
 
 # Get the IP address of the Brother VC-500W label printer
 printer-ip:
