@@ -26,9 +26,13 @@ setup-printer:
 install:
     uv tool install . --force --reinstall --with pycups
 
-# Print horizontal text label
-print-text text:
-    uv run python3 -m labelprinter.print_text "{{text}}" --rotate 0
+# Print horizontal text label (direct mode - no queue)
+print-text-direct text:
+    uv run python3 -m labelprinter.print_text "{{text}}" --rotate 0 --direct
+
+# Print horizontal text label (queue mode - via CUPS)
+print-text-queue text:
+    uv run python3 -m labelprinter.print_text "{{text}}" --rotate 0 --queue
 
 # Preview text label (dry-run + preview)
 preview-text text:
