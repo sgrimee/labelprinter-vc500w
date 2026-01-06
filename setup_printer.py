@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup script to detect and save Brother VC-500W printer hostname to config
+Setup script to detect and save Brother VC-500W printer IP address to config
 """
 
 import json
@@ -13,7 +13,11 @@ AVAHI_TIMEOUT = 10
 
 
 def detect_printer():
-    """Detect the printer hostname using avahi-resolve"""
+    """Detect the printer IP address using avahi-resolve
+
+    Returns the IP address (e.g., "192.168.1.100") or None if not found.
+    avahi-resolve output format: "hostname.local\t192.168.1.100"
+    """
     try:
         result = subprocess.run(
             ["avahi-resolve", "-n", DEFAULT_HOSTNAME, "-4"],
@@ -21,7 +25,13 @@ def detect_printer():
             text=True,
             timeout=AVAHI_TIMEOUT,
         )
-        return DEFAULT_HOSTNAME if result.returncode == 0 else None
+        if result.returncode == 0:
+            # Parse output: "hostname.local\t192.168.1.100"
+            # Extract the IP address (second column)
+            parts = result.stdout.strip().split("\t")
+            if len(parts) >= 2:
+                return parts[1]
+        return None
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
 
@@ -45,39 +55,36 @@ def load_existing_config(config_file):
         return {}
 
 
-def save_config(hostname):
-    """Save the hostname to the config file"""
+def save_config(ip_address):
+    """Save the IP address to the config file"""
     config_file = get_config_path()
     os.makedirs(os.path.dirname(config_file), exist_ok=True)
 
     config = load_existing_config(config_file)
-    config["host"] = hostname
+    config["host"] = ip_address
 
     with open(config_file, "w") as f:
         json.dump(config, f, indent=2)
 
-    print(f"✅ Saved printer hostname to config: {hostname}")
+    print(f"✅ Saved printer IP address to config: {ip_address}")
 
 
 def main():
     print("🔍 Detecting Brother VC-500W printer...")
 
-    hostname = detect_printer()
-    if hostname:
-        print(f"✅ Found printer at {hostname}")
-        save_config(hostname)
+    ip_address = detect_printer()
+    if ip_address:
+        print(f"✅ Found printer at {ip_address}")
+        save_config(ip_address)
         return 0
     else:
         print("❌ Could not find printer")
         print("   Make sure the printer is on and connected to the network")
         print(
-            "   You can also manually set the hostname in ~/.config/labelprinter/config.json"
+            "   You can also manually set the IP address in ~/.config/labelprinter/config.json"
         )
         return 1
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
-if __name__ == "__main__":
-    main()
