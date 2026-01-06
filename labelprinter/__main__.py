@@ -356,13 +356,13 @@ def submit_to_cups_queue(image_path, args):
 
 
 def process_arguments(args):
+    import sys
+
     connection = None
     try:
         # For print jobs, check if we should use CUPS mode
         if args.print_jpeg is not None and should_use_cups_mode(args):
             # Save JPEG to a temporary file if needed, then submit to CUPS
-            import sys
-
             result = submit_to_cups_queue(args.print_jpeg.name, args)
             sys.exit(result)
 
@@ -387,6 +387,15 @@ def process_arguments(args):
             release_lock(printer, args.release)
         else:
             raise ValueError("Unreachable code.")
+    except KeyboardInterrupt:
+        print("\nInterrupted by user", file=sys.stderr)
+        sys.exit(130)
+    except ValueError as e:
+        if args.get_status and args.json:
+            print(json.dumps({"connected": False}))
+            return
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
     except Exception:
         if args.get_status and args.json:
             print(json.dumps({"connected": False}))
