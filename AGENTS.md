@@ -31,6 +31,38 @@ brew install cups
 
 On NixOS, the flake provides these automatically.
 
+## Troubleshooting
+
+### Font Too Small or Unreadable
+If printed labels have text that's too small or unreadable:
+
+1. **Generate a test image first** to diagnose the issue:
+   ```bash
+   python -m labelprinter.print_text "TEST" --preview
+   ```
+
+2. **Inspect the generated image** to check text coverage:
+   ```bash
+   python3 << 'EOF'
+   from PIL import Image
+   img = Image.open('/home/sgrimee/.local/share/labelprinter/images/tmpmihb9y_p.jpg')
+   text_height = 85  # From the debug output or measure manually
+   coverage = text_height / img.height * 100
+   print(f"Text coverage: {coverage:.1f}% of label height")
+   print(f"Target: ~50% of label height (or 1/3 for smaller tapes)")
+   EOF
+   ```
+
+3. **Adjust font_size** in `~/.config/labelprinter/config.json` based on results:
+   - For 14mm tape with 50% text coverage: `font_size: 120`
+   - For 25mm tape with 33% text coverage: `font_size: 104`
+   - Increase font_size if text is too small, decrease if too large
+
+4. **Check label_width_mm** matches your tape:
+   - The printer auto-detects tape width on startup
+   - If config doesn't match (e.g., 12mm config with 14mm tape), the printer will use detected width
+   - Update config to match for consistent results
+
 ## Label Image Generation Requirements
 
 **CRITICAL: Follow these requirements for horizontal text labels:**
