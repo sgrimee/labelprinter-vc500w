@@ -42,6 +42,81 @@ class QueueWorker:
         if self.verbose or force:
             print(message)
 
+    def _extract_clean_error(self, error_output):
+        """
+        Extract a clean, user-friendly error message from subprocess output.
+
+        Tries to extract just the error message without stack traces.
+        Handles multi-line error messages (e.g., with "Possible solutions").
+        Prioritizes ValueError and similar high-level errors over lower-level ones.
+
+        Args:
+            error_output: Raw stderr/stdout from subprocess
+
+        Returns:
+            Clean error message suitable for user display
+        """
+        if not error_output:
+            return "Unknown error occurred"
+
+        lines = error_output.split("\n")
+
+        # Look for common error patterns, starting from the end (last error is usually most specific)
+        error_patterns = [
+            "ValueError:",
+            "RuntimeError:",
+            "OSError:",
+            "ConnectionError:",
+            "TimeoutError:",
+            "IOError:",
+            "socket.gaierror:",
+            "Error:",
+        ]
+
+        # First pass: look for ValueError or other high-level errors
+        for i in range(len(lines) - 1, -1, -1):
+            line = lines[i]
+            if any(line.strip().startswith(err) for err in error_patterns):
+                # Found an error line, collect it and any following explanation lines
+                error_lines = [line.strip()]
+
+                # Collect following lines that are part of the error message
+                # (indented lines or lines starting with "Possible solutions", bullet points, etc.)
+                for next_line in lines[i + 1 :]:
+                    next_stripped = next_line.strip()
+                    # Stop if we hit a blank line or "Traceback"
+                    if not next_stripped or next_stripped.startswith("Traceback"):
+                        break
+                    # Include continuation lines (bullet points, suggestions, etc.)
+                    if next_stripped.startswith(
+                        ("•", "-", "*", "Possible", "Try", "Check", "Update", "File")
+                    ):
+                        error_lines.append(next_stripped)
+                    elif (
+                        next_stripped
+                        and not next_stripped[0].isupper()
+                        and not next_stripped.startswith(("File", "Traceback"))
+                    ):
+                        # Include lowercase continuation lines
+                        error_lines.append(next_stripped)
+                    else:
+                        break
+
+                return "\n".join(error_lines)
+
+        # Fallback: return last non-empty line if it looks like an error
+        for line in reversed(lines):
+            stripped = line.strip()
+            if (
+                stripped
+                and not stripped.startswith("File")
+                and "Traceback" not in stripped
+            ):
+                return stripped
+
+        # Last resort: return first line if non-empty
+        return lines[0].strip() if lines[0].strip() else "Unknown error occurred"
+
     def get_held_jobs(self):
         """Get all held/pending jobs from the queue"""
         try:
@@ -203,9 +278,18 @@ class QueueWorker:
                     )
                     return (False, "Printer busy", True)  # Retry later
 
-                # Other error
-                self.log(f"✗ Job {job_id} failed: {error_output}", force=True)
-                return (False, error_output, False)  # Don't retry
+                # Extract clean error message (without stack trace)
+                clean_error = self._extract_clean_error(error_output)
+
+                # Log clean error message
+                self.log(f"✗ Job {job_id} failed: {clean_error}", force=True)
+
+                # In verbose mode, also show full output for debugging
+                if self.verbose:
+                    self.log("Full output for debugging:", force=True)
+                    self.log(error_output, force=True)
+
+                return (False, clean_error, False)  # Don't retry
 
         except subprocess.TimeoutExpired:
             error = "Print command timed out (120s)"
