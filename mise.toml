@@ -1,0 +1,49 @@
+# mise configuration for labelprinter-vc500w
+# Mirrors the Nix devShell (flake.nix) for non-Nix users.
+#
+# System deps not managed by mise (needed for `uv sync --all-extras` / pycups):
+#   - C compiler and CUPS headers (e.g. build-essential libcups2-dev, or `brew install cups`)
+#   - chafa (optional, terminal image preview)
+
+[tools]
+# 3.11 for pycups compatibility (matches flake.nix)
+python = "3.11"
+uv = "latest"
+just = "latest"
+
+[settings]
+# Auto-activate the uv-managed .venv (created by `uv sync` / `mise run sync`)
+python.uv_venv_auto = true
+
+[tasks.sync]
+description = "Install Python dependencies (dev group)"
+run = "uv sync"
+
+[tasks.sync-all]
+description = "Install Python dependencies including CUPS extras"
+run = "uv sync --all-extras"
+
+[tasks.test]
+description = "Run tests with pytest"
+run = "uv run pytest labelprinter/test/"
+
+[tasks.format]
+description = "Lint and autofix with ruff"
+run = "uv run ruff check --fix ."
+
+[tasks.type-check]
+description = "Run mypy type checking"
+run = "uv run mypy ."
+
+[tasks.check]
+description = "Run format and type-check"
+depends = ["format", "type-check"]
+
+[tasks.preview-text]
+description = "Preview a text label without printing (dry-run + preview)"
+usage = 'arg "<text>" help="Label text"'
+run = 'uv run python3 -m labelprinter.print_text "${usage_text}" --rotate 0 --dry-run --preview'
+
+[tasks.install]
+description = "Install the CLI system-wide with uv tool"
+run = "uv tool install . --force --reinstall --with pycups"
