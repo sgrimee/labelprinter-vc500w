@@ -105,7 +105,7 @@ Create `~/.config/labelprinter/config.json`:
 Or run the auto-detection:
 
 ```bash
-just setup-printer
+mise run setup-printer
 ```
 
 ## Usage

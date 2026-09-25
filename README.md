@@ -147,7 +147,7 @@ pip install /path/to/labelprinter-vc500w
 
 ```bash
 # Option A: Use the included script
-just printer-ip
+mise run printer-ip
 
 # Option B: Use nbtscan
 nbtscan -v -s : 192.168.1.1/24 | grep "VC-500W"
@@ -160,7 +160,7 @@ nbtscan -v -s : 192.168.1.1/24 | grep "VC-500W"
 
 ```bash
 # Run the setup script to auto-detect and save printer hostname
-just setup-printer
+mise run setup-printer
 
 # Or manually edit ~/.config/labelprinter/config.json
 ```
@@ -201,7 +201,7 @@ label-text "Vertical" --rotate 90
 
 Configuration is stored in: `~/.config/labelprinter/config.json`
 
-The file is created automatically on first run. You can edit it manually or use `just setup-printer` for auto-configuration.
+The file is created automatically on first run. You can edit it manually or use `mise run setup-printer` for auto-configuration.
 
 ### Complete Configuration Example
 
@@ -612,28 +612,31 @@ This hybrid approach gives you CUPS benefits (standard queue interface, job pers
 
 ## Development
 
-### Using just
+### Using mise
 
-The project includes a `justfile` for common tasks:
+The project includes a `mise.toml` that pins Python/uv and defines common tasks:
 
 ```bash
-# Show all available commands
-just --list
+# Show all available tasks
+mise tasks
 
 # Get printer IP address
-just printer-ip
+mise run printer-ip
 
 # Setup printer configuration
-just setup-printer
+mise run setup-printer
 
-# Print text label
-just print-text "Your Text"
+# Print text label (direct, no queue)
+mise run print-text-direct "Your Text"
 
 # Preview label without printing
-just preview-text "Your Text"
+mise run preview-text "Your Text"
 
 # Install dependencies
-just install
+mise run sync
+
+# Install the CLI system-wide
+mise run install
 ```
 
 ### Using Nix development shell
@@ -650,7 +653,7 @@ direnv allow
 The dev shell includes:
 - Python 3 with Pillow
 - uv for package management
-- just for task running
+- mise for task running
 - chafa for terminal image preview
 - black, flake8, pytest for code quality
 
@@ -664,7 +667,7 @@ pytest labelprinter/test/
 pytest labelprinter/test/test_printer.py::TestPrinter::test_method_name
 
 # Test printer connection
-just test-printer
+mise run test-printer
 ```
 
 ### Code style
@@ -711,7 +714,7 @@ See `AGENTS.md` for complete image generation requirements.
 
 ### Printer not found
 - Check printer is on and connected to network
-- Verify IP address: `just printer-ip`
+- Verify IP address: `mise run printer-ip`
 - Try printer hostname: `VC-500W####.local` (check printer display)
 - Check firewall allows port 9100
 

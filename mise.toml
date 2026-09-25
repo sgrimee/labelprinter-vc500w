@@ -9,7 +9,6 @@
 # 3.11 for pycups compatibility (matches flake.nix)
 python = "3.11"
 uv = "latest"
-just = "latest"
 
 [settings]
 # Auto-activate the uv-managed .venv (created by `uv sync` / `mise run sync`)
@@ -47,3 +46,29 @@ run = 'uv run python3 -m labelprinter.print_text "${usage_text}" --rotate 0 --dr
 [tasks.install]
 description = "Install the CLI system-wide with uv tool"
 run = "uv tool install . --force --reinstall --with pycups"
+
+[tasks.printer-ip]
+description = "Get the IP address of the Brother VC-500W label printer"
+run = "./get_printer_ip.sh"
+
+[tasks.setup-printer]
+description = "Detect and save printer hostname to config"
+run = "python3 setup_printer.py"
+
+[tasks.test-printer]
+description = "Test the printer connection"
+run = "uv run python3 -m labelprinter.test.test_printer"
+
+[tasks.print-text-direct]
+description = "Print horizontal text label (direct mode - no queue)"
+usage = 'arg "<text>" help="Label text"'
+run = 'uv run python3 -m labelprinter.print_text "${usage_text}" --rotate 0 --direct'
+
+[tasks.print-text-queue]
+description = "Print horizontal text label (queue mode - via CUPS)"
+usage = 'arg "<text>" help="Label text"'
+run = 'uv run python3 -m labelprinter.print_text "${usage_text}" --rotate 0 --queue'
+
+[tasks.queue-worker]
+description = "Start the label queue worker"
+run = "uv run python3 -m labelprinter.queue_worker"

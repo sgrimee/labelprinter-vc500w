@@ -3,7 +3,7 @@
 ## Important: Never Print Labels Spontaneously
 
 ⚠️ **CRITICAL:** Do NOT run any print commands without explicit user approval. This includes:
-- `just print-text` or `just print-text-direct`
+- `mise run print-text-direct` or `mise run print-text-queue`
 - `label-text` or similar printing commands
 - Any subprocess that prints to the physical printer
 
@@ -25,15 +25,15 @@ label-text "TEST" --direct
 
 ## Build/Lint/Test Commands
 
-- **Install dependencies**: `just install` or `uv sync`
-- **Format code**: `just format` or `uv run ruff check --fix .`
-- **Type check**: `just type-check` or `uv run mypy .`
-- **Check code**: `just check` (runs format and type-check)
-- **Run tests**: `just test` or `uv run pytest labelprinter/test/`
+- **Install dependencies**: `mise run sync` or `uv sync`
+- **Format code**: `mise run format` or `uv run ruff check --fix .`
+- **Type check**: `mise run type-check` or `uv run mypy .`
+- **Check code**: `mise run check` (runs format and type-check)
+- **Run tests**: `mise run test` or `uv run pytest labelprinter/test/`
 - **Run single test**: `uv run pytest labelprinter/test/test_printer.py::TestPrinter::test_method_name`
-- **Test printer connection**: `just test-printer` or `python -m labelprinter.test.test_printer`
-- **Run main module**: `just run` or `python -m labelprinter`
-- **Generate test label**: `just preview-text "Test Label"`
+- **Test printer connection**: `mise run test-printer` or `python -m labelprinter.test.test_printer`
+- **Run main module**: `uv run python -m labelprinter`
+- **Generate test label**: `mise run preview-text "Test Label"`
 
 ## System Dependencies
 

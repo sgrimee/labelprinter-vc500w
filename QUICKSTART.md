@@ -14,7 +14,7 @@ nix profile install .
 
 ```bash
 # Auto-detect printer
-just setup-printer
+mise run setup-printer
 
 # Or manually create ~/.config/labelprinter/config.json
 ```
@@ -48,7 +48,7 @@ label-raw --host VC-500W.local --get-status
 label-raw --host VC-500W.local --print-jpeg image.jpg
 
 # Get printer IP
-just printer-ip
+mise run printer-ip
 ```
 
 ## Options
@@ -83,7 +83,7 @@ label-text "Large" --width 50 --font-size 150
 
 ```bash
 # Printer not found?
-just printer-ip
+mise run printer-ip
 
 # Print stuck?
 label-raw --host VC-500W.local --get-status

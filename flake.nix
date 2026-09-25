@@ -21,7 +21,7 @@
         
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            just
+            mise
             chafa  # Terminal image viewer
             python311
             uv
@@ -34,9 +34,9 @@
             echo "🖨️  Label printer development environment (Python 3.11)"
             echo ""
             echo "Development commands:"
-            echo "  just --list              - Show all available commands"
-            echo "  just print-text 'Text'   - Print text label"
-            echo "  just preview-text 'Text' - Preview without printing"
+            echo "  mise tasks                         - Show all available tasks"
+            echo "  mise run print-text-direct 'Text' - Print text label"
+            echo "  mise run preview-text 'Text'      - Preview without printing"
             echo ""
             echo "Python commands:"
             echo "  uv run python -m labelprinter.print_text 'Text'  - Print text label"
