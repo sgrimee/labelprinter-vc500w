@@ -1,6 +1,6 @@
 {
-  "host": "VC-500W4188.local",
-  "font": "/nix/store/r74c2n8knmaar5jmkgbsdk35p7nxwh2g-liberation-fonts-2.1.5/share/fonts/truetype/LiberationSans-Regular.ttf",
+  "host": "10.0.1.151",
+  "font": "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
   "padding": 50,
   "rotate": 0,
   "pixels_per_mm": 12.48,
@@ -21,5 +21,4 @@
     "queue_name": "BrotherVC500W",
     "auto_process": false
   }
-}</content>
-<parameter name="filePath">config.example.json
+}
