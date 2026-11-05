@@ -65,9 +65,13 @@ class LabelPrinter:
         )
         self._connection.send_file(handle)
 
+        # The printer answers with a single status message; the second
+        # argument is the callback for reading more data. Calling
+        # get_message() twice here (since fe296bb) blocked until the timeout
+        # after every print.
         return PrintAnswer(
             self._connection.get_message(long_timeout=True),
-            self._connection.get_message(long_timeout=True),
+            self._connection.get_message,
         )
 
     def wait_to_turn_idle(self, timeout=30):
