@@ -1,0 +1,162 @@
+<?xml version="1.0"?>
+<!--
+  gLabels templates for the Brother VC-500W (continuous ZINK tape).
+  Width = cassette tape width, height = label length.
+  For text running along the tape pick the rotated orientation in the
+  "New label" dialog. Print through a vc500w queue (contrib/cups).
+  Install: copy to ~/.config/libglabels/templates/
+-->
+<Glabels-templates>
+  <Template brand="Brother" part="VC-500W 9x30" size="Other" width="9mm" height="30mm" description="VC-500W 9 mm × 30 mm (CZ-1001)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="9mm" height="30mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="0.5mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 9x50" size="Other" width="9mm" height="50mm" description="VC-500W 9 mm × 50 mm (CZ-1001)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="9mm" height="50mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="0.5mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 9x80" size="Other" width="9mm" height="80mm" description="VC-500W 9 mm × 80 mm (CZ-1001)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="9mm" height="80mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="0.5mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 12x30" size="Other" width="12mm" height="30mm" description="VC-500W 12 mm × 30 mm (CZ-1002)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="12mm" height="30mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 12x50" size="Other" width="12mm" height="50mm" description="VC-500W 12 mm × 50 mm (CZ-1002)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="12mm" height="50mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 12x80" size="Other" width="12mm" height="80mm" description="VC-500W 12 mm × 80 mm (CZ-1002)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="12mm" height="80mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 12x100" size="Other" width="12mm" height="100mm" description="VC-500W 12 mm × 100 mm (CZ-1002)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="12mm" height="100mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 19x40" size="Other" width="19mm" height="40mm" description="VC-500W 19 mm × 40 mm (CZ-1003)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="19mm" height="40mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 19x60" size="Other" width="19mm" height="60mm" description="VC-500W 19 mm × 60 mm (CZ-1003)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="19mm" height="60mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 19x80" size="Other" width="19mm" height="80mm" description="VC-500W 19 mm × 80 mm (CZ-1003)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="19mm" height="80mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 19x100" size="Other" width="19mm" height="100mm" description="VC-500W 19 mm × 100 mm (CZ-1003)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="19mm" height="100mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 25x40" size="Other" width="25mm" height="40mm" description="VC-500W 25 mm × 40 mm (CZ-1004)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="25mm" height="40mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 25x60" size="Other" width="25mm" height="60mm" description="VC-500W 25 mm × 60 mm (CZ-1004)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="25mm" height="60mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 25x80" size="Other" width="25mm" height="80mm" description="VC-500W 25 mm × 80 mm (CZ-1004)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="25mm" height="80mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 25x100" size="Other" width="25mm" height="100mm" description="VC-500W 25 mm × 100 mm (CZ-1004)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="25mm" height="100mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 50x50" size="Other" width="50mm" height="50mm" description="VC-500W 50 mm × 50 mm (CZ-1005)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="50mm" height="50mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 50x63.5" size="Other" width="50mm" height="63.5mm" description="VC-500W 50 mm × 63.5 mm (CZ-1005)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="50mm" height="63.5mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 50x75" size="Other" width="50mm" height="75mm" description="VC-500W 50 mm × 75 mm (CZ-1005)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="50mm" height="75mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+  <Template brand="Brother" part="VC-500W 50x100" size="Other" width="50mm" height="100mm" description="VC-500W 50 mm × 100 mm (CZ-1005)">
+    <Meta category="label"/>
+    <Meta category="rectangle-label"/>
+    <Label-rectangle id="0" width="50mm" height="100mm" round="0mm" x_waste="0mm" y_waste="0mm">
+      <Markup-margin size="1mm"/>
+      <Layout nx="1" ny="1" x0="0mm" y0="0mm" dx="0mm" dy="0mm"/>
+    </Label-rectangle>
+  </Template>
+</Glabels-templates>

@@ -9,6 +9,7 @@ Python CLI tools for controlling the [Brother VC-500W](https://www.brother-usa.c
 - ⚙️ Configure via JSON config file
 - 🔧 Horizontal and vertical text support
 - 📬 Optional CUPS queue mode with job management
+- 🏷️ gLabels templates for all cassette widths — see [contrib/glabels](contrib/glabels/README.md)
 - 🚀 Easy installation with `uv tool` or Nix
 
 Fork from [m7i.org/projects/labelprinter-linux-python-for-vc-500w](https://m7i.org/projects/labelprinter-linux-python-for-vc-500w/)
