@@ -18,6 +18,8 @@
 
 import argparse
 import json
+import os
+from pathlib import Path
 
 from PIL import Image
 import tempfile
@@ -27,7 +29,18 @@ from labelprinter.connection import Connection
 from labelprinter.printer import LabelPrinter
 
 
+def _load_user_config():
+    """Read ~/.config/labelprinter/config.json, empty dict if missing."""
+    config_file = Path.home() / ".config" / "labelprinter" / "config.json"
+    try:
+        with open(config_file, "r") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
 def main():
+    config = _load_user_config()
     parser = argparse.ArgumentParser(
         description="Remotely control a VC-500W via TCP/IP.",
         allow_abbrev=False,
@@ -40,8 +53,8 @@ def main():
     parser.add_argument(
         "-h",
         "--host",
-        default="192.168.0.1",
-        help="the VC-500W's hostname or IP address, defaults to %(default)s",
+        default=config.get("host", "192.168.0.1"),
+        help="the VC-500W's hostname or IP address, defaults to %(default)s (host in config.json)",
     )
     parser.add_argument(
         "-p",
@@ -91,6 +104,12 @@ def main():
         choices=["none", "half", "full"],
         default="full",
         help="sets the cut mode after printing, either not cutting (none), allowing the user to slide to cut (half) up to a complete cut of the label (full), defaults to %(default)s",
+    )
+    print_group.add_argument(
+        "--timeout",
+        type=int,
+        default=int(config.get("print_timeout", 120)),
+        help="seconds to wait for the printer to answer a print job, defaults to %(default)s (print_timeout in config.json)",
     )
     print_group.add_argument(
         "--wait-after-print",
@@ -202,7 +221,7 @@ def get_status(printer):
     )
 
 
-def print_jpeg(printer, use_lock, mode, cut, jpeg_file, wait_after_print):
+def print_jpeg(printer, use_lock, mode, cut, jpeg_file, wait_after_print, timeout=120):
     _get_configuration_and_display_connection(printer)
     status = printer.get_status()
 
@@ -212,7 +231,7 @@ def print_jpeg(printer, use_lock, mode, cut, jpeg_file, wait_after_print):
             "Printer is currently %s (%s, %s). Waiting for it to become idle..."
             % (status.print_state, status.print_job_stage, status.print_job_error)
         )
-        printer.wait_to_turn_idle()
+        printer.wait_to_turn_idle(timeout)
         print("Printer is now idle, proceeding with print job...")
 
     if use_lock:
@@ -235,30 +254,33 @@ def print_jpeg(printer, use_lock, mode, cut, jpeg_file, wait_after_print):
             )
         file_type = mimetypes.guess_type(jpeg_file.name)[0]
         print("Input file type is %s" % (file_type))
-        if file_type.startswith("image/") and not file_type == "image/jpeg":
+        converted_path = None
+        if file_type and file_type.startswith("image/") and file_type != "image/jpeg":
             print("Is %s but not jpeg, try convert" % file_type)
             try:
-                with tempfile.NamedTemporaryFile() as tmp:
-                    im1 = Image.open(jpeg_file.name)
-                    imX = im1.convert("RGB")
-                    pathName = tmp.name + ".jpg"
-                    imX.save(pathName)
+                fd, converted_path = tempfile.mkstemp(suffix=".jpg")
+                os.close(fd)
+                with Image.open(jpeg_file.name) as im1:
+                    im1.convert("RGB").save(converted_path, quality=95)
+                jpeg_file = open(converted_path, "rb")
+                print("%s converted to image/jpeg" % file_type)
+                file_type = "image/jpeg"
+            except Exception as e:
+                print("failed to convert to jpg: %s" % e)
 
-                    jpeg_file = open(pathName, "rb")
-                    old_file_type = file_type
-                    file_type = mimetypes.guess_type(jpeg_file.name)[0]
-                    print("%s convert to %s" % (old_file_type, file_type))
-            except Exception:
-                print("fail for convert to jpg, ")
-
-        if file_type == "image/jpeg":
-            printer.print_jpeg(jpeg_file, mode, cut)
-            if wait_after_print:
-                printer.wait_to_turn_idle()
-            print("PRINT OK")
-        else:
-            print("not a JPEG file")
-            print("PRINT FAILED")
+        try:
+            if file_type == "image/jpeg":
+                printer.print_jpeg(jpeg_file, mode, cut)
+                if wait_after_print:
+                    printer.wait_to_turn_idle(timeout)
+                print("PRINT OK")
+            else:
+                print("not a JPEG file")
+                print("PRINT FAILED")
+        finally:
+            if converted_path:
+                jpeg_file.close()
+                os.unlink(converted_path)
     finally:
         if use_lock:
             print("Releasing lock for job %s..." % lock.job_number)
@@ -367,7 +389,7 @@ def process_arguments(args):
             sys.exit(result)
 
         # Otherwise use direct printing mode
-        printer = LabelPrinter(Connection(args.host, args.port))
+        printer = LabelPrinter(Connection(args.host, args.port, args.timeout))
 
         if args.get_status:
             if args.json:
@@ -382,6 +404,7 @@ def process_arguments(args):
                 args.print_cut,
                 args.print_jpeg,
                 args.wait_after_print,
+                args.timeout,
             )
         elif args.release is not None:
             release_lock(printer, args.release)
