@@ -9,6 +9,7 @@ Python CLI tools for controlling the [Brother VC-500W](https://www.brother-usa.c
 - ⚙️ Configure via JSON config file
 - 🔧 Horizontal and vertical text support
 - 📬 Optional CUPS queue mode with job management
+- 🖨️ CUPS backend: print from any app (gLabels, LibreOffice, …) in vivid mode with cut modes — see [contrib/cups](contrib/cups/README.md)
 - 🚀 Easy installation with `uv tool` or Nix
 
 Fork from [m7i.org/projects/labelprinter-linux-python-for-vc-500w](https://m7i.org/projects/labelprinter-linux-python-for-vc-500w/)
@@ -228,7 +229,7 @@ The file is created automatically on first run. You can edit it manually or use 
 ### Configuration Parameters
 
 **Printer Settings:**
-- `host` - Printer hostname or IP address (e.g., "VC-500W4188.local" or "192.168.1.100")
+- `host` - Printer hostname or IP address (e.g., "VC-500W4188.local" or "192.168.1.100") — also the default for `label-raw --host`
 - `label_width_mm` - Tape width in millimeters (12, 19, 25, 29, 38, 50)
 
 **Font Settings:**
@@ -242,7 +243,7 @@ The file is created automatically on first run. You can edit it manually or use 
 - `text_padding_pixels` - Extra padding around text (0 for minimal waste)
 
 **Timeouts:**
-- `print_timeout` - Maximum seconds to wait for printing (default: 120)
+- `print_timeout` - Maximum seconds to wait for printing (default: 120); also the default for `label-raw --timeout`
 - `avahi_timeout` - Seconds to wait for mDNS resolution (default: 10)
 
 **CUPS Queue Mode (Optional):**

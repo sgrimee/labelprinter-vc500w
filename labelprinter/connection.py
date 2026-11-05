@@ -20,11 +20,12 @@ import socket
 
 
 class Connection:
-    def __init__(self, host, port):
+    def __init__(self, host, port, long_timeout=120):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._timeout_standard = 5
         self._timeout_flush = 1
-        self._timeout_long = 30
+        # Vivid prints take well over 30 s before the printer answers.
+        self._timeout_long = long_timeout
         self._timeout_connect = 3  # Faster timeout for initial connection
         self._socket.settimeout(self._timeout_connect)
 

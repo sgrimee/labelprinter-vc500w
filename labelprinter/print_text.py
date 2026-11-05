@@ -13,36 +13,30 @@ import time
 from pathlib import Path
 
 # Import printer communication classes for tape detection
+from labelprinter.tape import nominal_width
 from labelprinter.connection import Connection
 from labelprinter.printer import LabelPrinter
 
 CONFIG_FILE = Path.home() / ".config" / "labelprinter" / "config.json"
 
+
 # Tape width detection mapping
 # Some printers report slightly different widths than the actual tape width
 # This maps detected widths to canonical widths
-TAPE_WIDTH_MAPPING = {
-    13: 12,  # Printer reports 13mm for 12mm tape (firmware rounding)
-    # Add more mappings as needed
-}
-
-
 def normalize_tape_width(detected_width_mm):
     """
-    Normalize detected tape width to a canonical width.
+    Normalize detected tape width to the nominal cassette width.
 
-    Some printers report tape width slightly differently than the actual tape.
-    This function maps known discrepancies to the correct width.
+    The printer reports the width in inches, so e.g. 12 mm tape shows up as
+    12.7 mm and 50 mm tape as 50.8 mm.
 
     Args:
         detected_width_mm: Width reported by printer in mm
 
     Returns:
-        Normalized width in mm
+        Nominal width in mm (9, 12, 19, 25 or 50)
     """
-    # Map to integer first for comparison
-    width_int = round(detected_width_mm)
-    return TAPE_WIDTH_MAPPING.get(width_int, width_int)
+    return nominal_width(detected_width_mm)
 
 
 def get_adjusted_font_size(config):

@@ -1,0 +1,5 @@
+#!/bin/sh
+# CUPS backend wrapper for the Brother VC-500W, installed to
+# $(cups-config --serverbin)/backend/vc500w with mode 0755 (runs as lp).
+# PREFIX is replaced by install.sh.
+exec "@PREFIX@/bin/python" -I -m labelprinter.cups_backend "$@"

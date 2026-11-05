@@ -23,6 +23,7 @@ label-raw = "labelprinter.__main__:main"
 label-queue = "labelprinter.queue_manager:main"
 label-queue-worker = "labelprinter.queue_worker:main"
 label-queue-setup = "labelprinter.queue_setup:main"
+vc500w-cups-backend = "labelprinter.cups_backend:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
